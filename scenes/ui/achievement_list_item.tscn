@@ -1,0 +1,66 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8qjyxrq6yvx5"]
+
+[ext_resource type="Script" path="res://scripts/ui/achievement_list_item.gd" id="1_yvmkp"]
+
+[node name="AchievementListItem" type="PanelContainer"]
+custom_minimum_size = Vector2(0, 80)
+offset_right = 400.0
+offset_bottom = 80.0
+script = ExtResource("1_yvmkp")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="IconLabel" type="Label" parent="HBoxContainer"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "🏆"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TitleLabel" type="Label" parent="HBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Achievement Title"
+
+[node name="DescriptionLabel" type="Label" parent="HBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 12
+text = "Achievement description goes here"
+autowrap_mode = 3
+
+[node name="ProgressBar" type="ProgressBar" parent="HBoxContainer/VBoxContainer"]
+layout_mode = 2
+value = 50.0
+
+[node name="ProgressLabel" type="Label" parent="HBoxContainer/VBoxContainer/ProgressBar"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 10
+text = "50%"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="UnlockTimeLabel" type="Label" parent="HBoxContainer/VBoxContainer"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.8, 0.6, 1)
+theme_override_font_sizes/font_size = 10
+text = "Unlocked on: 2023-05-01 14:30:22"

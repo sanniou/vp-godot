@@ -204,23 +204,10 @@ func _on_body_entered(body):
 
 # 创建击中效果
 func create_hit_effect(pos):
-    var effect = CPUParticles2D.new()
-    effect.emitting = true
-    effect.one_shot = true
-    effect.explosiveness = 0.8
-    effect.amount = 10
-    effect.lifetime = 0.3
-    effect.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
-    effect.emission_sphere_radius = 5
-    effect.direction = Vector2(0, 0)
-    effect.spread = 180
-    effect.gravity = Vector2(0, 0)
-    effect.initial_velocity_min = 30
-    effect.initial_velocity_max = 50
-    effect.scale_amount = 3
-    effect.color = Color(1.0, 0.8, 0.2, 0.7)  # 金黄色
+    # 使用粒子辅助工具创建击中效果
+    var ParticleHelper = load("res://scripts/utils/particle_helper.gd")
+    var effect = ParticleHelper.create_hit_effect(pos, Color(1.0, 0.8, 0.2, 0.7), 3.0)
     get_tree().current_scene.add_child(effect)
-    effect.global_position = pos
 
     # 自动清理
     var timer = Timer.new()
@@ -248,41 +235,44 @@ func update_boomerangs():
 
 # 获取升级选项
 func get_upgrade_options() -> Array:
+    # 使用通用翻译辅助工具
+    var Tr = load("res://scripts/language/tr.gd")
+
     return [
         {
             "type": UpgradeType.DAMAGE,
-            "name": "伤害 +8",
-            "description": "增加回旋镖伤害",
+            "name": Tr.weapon_upgrade("damage", "伤害 +8"),
+            "description": Tr.weapon_upgrade_desc("damage", "增加回旋镖伤害"),
             "icon": "💥"
         },
         {
             "type": UpgradeType.PROJECTILE_COUNT,
-            "name": "回旋镖 +1",
-            "description": "增加回旋镖数量",
+            "name": Tr.weapon_upgrade("projectile_count", "回旋镖 +1"),
+            "description": Tr.weapon_upgrade_desc("projectile_count", "增加回旋镖数量"),
             "icon": "🪃"
         },
         {
             "type": UpgradeType.SPECIAL,
-            "name": "击中 +1",
-            "description": "增加可击中敌人数量",
+            "name": Tr.weapon_upgrade("hit_count", "击中 +1"),
+            "description": Tr.weapon_upgrade_desc("hit_count", "增加可击中敌人数量"),
             "icon": "🎯"
         },
         {
             "type": UpgradeType.AREA,
-            "name": "距离 +50",
-            "description": "增加最大投掷距离",
+            "name": Tr.weapon_upgrade("range", "距离 +50"),
+            "description": Tr.weapon_upgrade_desc("range", "增加最大投掷距离"),
             "icon": "↔️"
         },
         {
             "type": UpgradeType.PROJECTILE_SPEED,
-            "name": "速度 +50",
-            "description": "增加投掷和返回速度",
+            "name": Tr.weapon_upgrade("projectile_speed", "速度 +50"),
+            "description": Tr.weapon_upgrade_desc("projectile_speed", "增加投掷和返回速度"),
             "icon": "💨"
         },
         {
             "type": UpgradeType.ATTACK_SPEED,
-            "name": "攻击速度 +20%",
-            "description": "增加投掷频率",
+            "name": Tr.weapon_upgrade("attack_speed", "攻击速度 +20%"),
+            "description": Tr.weapon_upgrade_desc("attack_speed", "增加投掷频率"),
             "icon": "🔄"
         }
     ]

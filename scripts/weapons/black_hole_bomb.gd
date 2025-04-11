@@ -143,7 +143,11 @@ func create_black_hole():
     particles.initial_velocity_max = 30
     particles.radial_accel_min = -100
     particles.radial_accel_max = -50
-    particles.scale_amount = 3
+
+    # 使用兼容的方式设置粒子缩放
+    var ParticleHelper = load("res://scripts/utils/particle_helper.gd")
+    ParticleHelper.set_particle_scale(particles, 3.0)
+
     particles.color = Color(0.5, 0.0, 0.8, 0.5)
     black_hole.add_child(particles)
 
@@ -222,7 +226,11 @@ func _process(delta):
 
 # 爆炸效果
 func explode():
-    # 创建爆炸视觉效果
+    # 使用粒子辅助工具创建爆炸效果
+    var ParticleHelper = load("res://scripts/utils/particle_helper.gd")
+    var explosion_radius = $Area2D/CollisionShape2D.shape.radius if has_node("Area2D/CollisionShape2D") else 80
+
+    # 创建爆炸效果
     var explosion = CPUParticles2D.new()
     explosion.emitting = true
     explosion.one_shot = true
@@ -230,13 +238,16 @@ func explode():
     explosion.amount = 100
     explosion.lifetime = 0.5
     explosion.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
-    explosion.emission_sphere_radius = $Area2D/CollisionShape2D.shape.radius
+    explosion.emission_sphere_radius = explosion_radius
     explosion.direction = Vector2(0, 0)
     explosion.spread = 180
     explosion.gravity = Vector2(0, 0)
     explosion.initial_velocity_min = 100
     explosion.initial_velocity_max = 200
-    explosion.scale_amount = 5
+
+    # 使用兼容的方式设置粒子缩放
+    ParticleHelper.set_particle_scale(explosion, 5.0)
+
     explosion.color = Color(0.8, 0.2, 1.0, 0.7)
     get_tree().current_scene.add_child(explosion)
     explosion.global_position = global_position
@@ -280,35 +291,38 @@ func update_black_holes(delta):
 
 # 获取升级选项
 func get_upgrade_options() -> Array:
+    # 使用通用翻译辅助工具
+    var Tr = load("res://scripts/language/tr.gd")
+
     return [
         {
             "type": UpgradeType.DAMAGE,
-            "name": "伤害 +5/秒",
-            "description": "增加黑洞每秒伤害",
+            "name": Tr.weapon_upgrade("damage", "伤害 +5/秒"),
+            "description": Tr.weapon_upgrade_desc("damage", "增加黑洞每秒伤害"),
             "icon": "💥"
         },
         {
             "type": UpgradeType.SPECIAL,
-            "name": "爆炸伤害 +20",
-            "description": "增加黑洞爆炸伤害",
+            "name": Tr.weapon_upgrade("special", "爆炸伤害 +20"),
+            "description": Tr.weapon_upgrade_desc("special", "增加黑洞爆炸伤害"),
             "icon": "💣"
         },
         {
             "type": UpgradeType.AREA,
-            "name": "半径 +15",
-            "description": "增加黑洞影响范围",
+            "name": Tr.weapon_upgrade("range", "半径 +15"),
+            "description": Tr.weapon_upgrade_desc("range", "增加黑洞影响范围"),
             "icon": "⭕"
         },
         {
             "type": UpgradeType.COOLDOWN,
-            "name": "冷却 -0.5秒",
-            "description": "减少黑洞冷却时间",
+            "name": Tr.weapon_upgrade("cooldown", "冷却 -0.5秒"),
+            "description": Tr.weapon_upgrade_desc("cooldown", "减少黑洞冷却时间"),
             "icon": "⏱️"
         },
         {
             "type": UpgradeType.EFFECT_DURATION,
-            "name": "持续时间 +0.5秒",
-            "description": "增加黑洞持续时间",
+            "name": Tr.weapon_upgrade("duration", "持续时间 +0.5秒"),
+            "description": Tr.weapon_upgrade_desc("duration", "增加黑洞持续时间"),
             "icon": "⌛"
         }
     ]

@@ -162,29 +162,32 @@ func deal_damage_to_enemy(enemy):
 
 # 获取升级选项
 func get_upgrade_options() -> Array:
+    # 使用通用翻译辅助工具
+    var Tr = load("res://scripts/language/tr.gd")
+
     return [
         {
             "type": UpgradeType.DAMAGE,
-            "name": "伤害 +10",
-            "description": "增加卫星伤害",
+            "name": Tr.weapon_upgrade("damage", "伤害 +10"),
+            "description": Tr.weapon_upgrade_desc("damage", "增加卫星伤害"),
             "icon": "💥"
         },
         {
             "type": UpgradeType.PROJECTILE_COUNT,
-            "name": "卫星 +1",
-            "description": "增加卫星数量",
+            "name": Tr.weapon_upgrade("projectile_count", "卫星 +1"),
+            "description": Tr.weapon_upgrade_desc("projectile_count", "增加卫星数量"),
             "icon": "🛰️"
         },
         {
             "type": UpgradeType.AREA,
-            "name": "轨道半径 +20",
-            "description": "增加卫星轨道半径",
+            "name": Tr.weapon_upgrade("range", "轨道半径 +20"),
+            "description": Tr.weapon_upgrade_desc("range", "增加卫星轨道半径"),
             "icon": "⭕"
         },
         {
             "type": UpgradeType.ATTACK_SPEED,
-            "name": "旋转速度 +20%",
-            "description": "增加卫星旋转速度",
+            "name": Tr.weapon_upgrade("attack_speed", "旋转速度 +20%"),
+            "description": Tr.weapon_upgrade_desc("attack_speed", "增加卫星旋转速度"),
             "icon": "🔄"
         }
     ]

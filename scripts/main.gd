@@ -3,6 +3,7 @@ extends Node2D
 # 预加载类
 const AbstractRelic = preload("res://scripts/relics/abstract_relic.gd")
 const RelicManager = preload("res://scripts/relics/relic_manager.gd")
+const SimpleAchievementSystem = preload("res://scripts/simple_achievement_system.gd")
 
 # Game state variables
 var game_time = 0
@@ -94,7 +95,7 @@ func _ready():
 			language_manager.name = "LanguageManager"
 			get_tree().root.call_deferred("add_child", language_manager)
 
-	# 连接语言变更信号
+# 连接语言变更信号
 	if language_manager:
 		language_manager.language_changed.connect(_on_language_changed)
 
@@ -107,6 +108,7 @@ func _ready():
 	$UI/StartScreen/StartButton.pressed.connect(_on_start_button_pressed)
 	$UI/PauseScreen/ResumeButton.pressed.connect(_on_resume_button_pressed)
 	$UI/PauseScreen/QuitButton.pressed.connect(_on_quit_button_pressed)
+	$UI/PauseScreen/ConsoleButton.pressed.connect(_on_console_button_pressed)
 	$UI/GameOverScreen/AchievementsButton.pressed.connect(_on_achievements_button_pressed)
 	$UI/AchievementsScreen/BackButton.pressed.connect(_on_achievements_back_button_pressed)
 	$UI/GameOverScreen/HomeButton.pressed.connect(_on_home_button_pressed)
@@ -132,9 +134,15 @@ func _ready():
 			print("Error: enemy_spawner does not have enemy_died signal")
 
 	# Initialize achievement manager
-	achievement_manager = Node.new()
-	achievement_manager.set_script(load("res://scripts/achievement_manager.gd"))
+	achievement_manager = SimpleAchievementSystem.new()
+	achievement_manager.name = "AchievementManager"
 	add_child(achievement_manager)
+
+	# Connect achievement unlocked signal
+	achievement_manager.achievement_unlocked.connect(_on_achievement_unlocked)
+
+	# Load achievements from file
+	achievement_manager.load_achievements_from_file()
 
 	# Initialize relic manager
 	relic_manager = Node.new()
@@ -455,9 +463,24 @@ func show_level_up_screen():
 
 	# 生成升级选项基础池
 	var base_options = [
-		{"type": "max_health", "name": "Max Health +20", "description": "Increase maximum health by 20", "amount": 20},
-		{"type": "move_speed", "name": "Move Speed +20", "description": "Increase movement speed by 20", "amount": 20},
-		{"type": "weapon_damage", "name": "Weapon Damage +20%", "description": "Increase all weapon damage by 20%", "amount": 0.2}
+		{
+			"type": "max_health",
+			"name": language_manager.get_translation("player_upgrade_max_health", "Max Health +20").format({"0": "20"}),
+			"description": language_manager.get_translation("player_upgrade_max_health_desc", "Increase maximum health by 20").format({"0": "20"}),
+			"amount": 20
+		},
+		{
+			"type": "move_speed",
+			"name": language_manager.get_translation("player_upgrade_move_speed", "Move Speed +20").format({"0": "20"}),
+			"description": language_manager.get_translation("player_upgrade_move_speed_desc", "Increase movement speed by 20").format({"0": "20"}),
+			"amount": 20
+		},
+		{
+			"type": "weapon_damage",
+			"name": language_manager.get_translation("player_upgrade_weapon_damage", "Weapon Damage +20%").format({"0": "20"}),
+			"description": language_manager.get_translation("player_upgrade_weapon_damage_desc", "Increase all weapon damage by 20%").format({"0": "20"}),
+			"amount": 0.2
+		}
 	]
 
 	# 如果有遗物管理器，允许遗物修改基础选项
@@ -518,48 +541,33 @@ func show_level_up_screen():
 			match weapon_id:
 				"flamethrower":
 					weapon_scene = flamethrower_scene
-					if language_manager:
-						weapon_name = language_manager.get_translation("weapon_flamethrower_name", "Flamethrower")
-						weapon_description = language_manager.get_translation("weapon_flamethrower_desc", "A weapon that deals continuous damage in a cone")
-					else:
-						weapon_name = "Flamethrower"
-						weapon_description = "A weapon that deals continuous damage in a cone"
 				"gun":
 					weapon_scene = gun_scene
-					weapon_name = "Gun"
-					weapon_description = "A weapon that fires bullets at enemies"
 				"knife":
 					weapon_scene = knife_scene
-					weapon_name = "Knife"
-					weapon_description = "A melee weapon that damages enemies in a wide arc"
 				"shield":
 					weapon_scene = shield_scene
-					weapon_name = "Shield"
-					weapon_description = "Protects from damage and burns nearby enemies"
 				"lightning":
 					weapon_scene = lightning_scene
-					weapon_name = "Lightning"
-					weapon_description = "Strikes enemies with chain lightning"
 				"orbital_satellite":
 					weapon_scene = orbital_satellite_scene
-					weapon_name = "Orbital Satellite"
-					weapon_description = "Satellites orbit around you, damaging enemies they touch"
 				"black_hole_bomb":
 					weapon_scene = black_hole_bomb_scene
-					weapon_name = "Black Hole Bomb"
-					weapon_description = "Creates a black hole that pulls and damages enemies"
 				"toxic_spray":
 					weapon_scene = toxic_spray_scene
-					weapon_name = "Toxic Spray"
-					weapon_description = "Sprays poison that deals damage over time"
 				"frost_staff":
 					weapon_scene = frost_staff_scene
-					weapon_name = "Frost Staff"
-					weapon_description = "Slows enemies and deals damage with ice magic"
 				"boomerang":
 					weapon_scene = boomerang_scene
-					weapon_name = "Boomerang"
-					weapon_description = "Returns after being thrown, damaging enemies along its path"
+
+			# 使用语言管理器获取武器名称和描述
+			if language_manager:
+				weapon_name = language_manager.get_translation("weapon_" + weapon_id + "_name", weapon_id.capitalize())
+				weapon_description = language_manager.get_translation("weapon_" + weapon_id + "_desc", "A weapon that damages enemies")
+			else:
+				# 如果没有语言管理器，使用默认名称
+				weapon_name = weapon_id.capitalize()
+				weapon_description = "A weapon that damages enemies"
 
 			# 添加到选项列表
 			if weapon_scene:
@@ -773,6 +781,18 @@ func toggle_pause():
 func _on_resume_button_pressed():
 	toggle_pause()
 
+# Console button pressed
+func _on_console_button_pressed():
+	# 隐藏暂停菜单
+	pause_screen.visible = false
+
+	# 显示控制台并让其获取焦点
+	$UI/ConsolePanel.visible = true
+	$UI/ConsolePanel.input_field.grab_focus()
+
+	# 保持游戏暂停状态
+	get_tree().paused = true
+
 # Quit button pressed
 func _on_quit_button_pressed():
 	# Hide pause screen
@@ -785,6 +805,10 @@ func _on_quit_button_pressed():
 func game_over():
 	game_running = false
 
+	# Save achievements
+	if achievement_manager:
+		achievement_manager.save_achievements_to_file()
+
 	# Update game over stats
 	var stats_text = "Time Survived: %02d:%02d\n" % [int(game_time / 60), int(game_time) % 60]
 	stats_text += "Level Reached: %d\n" % player_level
@@ -793,17 +817,22 @@ func game_over():
 	# Add achievement statistics if available
 	if achievement_manager:
 		stats_text += "Achievements Unlocked: %d/%d\n" % [
-			achievement_manager.achievements.values().filter(func(a): return a.unlocked).size(),
-			achievement_manager.achievements.size()
+			achievement_manager.get_unlocked_achievements_count(),
+			achievement_manager.get_total_achievements_count()
 		]
 
 		# Add recently unlocked achievements
-		var recent_achievements = achievement_manager.achievements.values().filter(func(a): return a.unlocked)
-		if recent_achievements.size() > 0:
+		var unlocked_achievements = []
+		for achievement_id in achievement_manager.achievements:
+			var achievement = achievement_manager.achievements[achievement_id]
+			if achievement.unlocked:
+				unlocked_achievements.append(achievement)
+
+		if unlocked_achievements.size() > 0:
 			stats_text += "\nRecent Achievements:\n"
-			for i in range(min(3, recent_achievements.size())):
-				var achievement = recent_achievements[i]
-				stats_text += achievement.icon + " " + achievement.title + "\n"
+			for i in range(min(3, unlocked_achievements.size())):
+				var achievement = unlocked_achievements[i]
+				stats_text += achievement.icon + " " + achievement.name + "\n"
 
 	$UI/GameOverScreen/StatsLabel.text = stats_text
 
@@ -835,20 +864,46 @@ func _on_achievements_button_pressed():
 	# Hide game over screen
 	game_over_screen.visible = false
 
-	# Update achievements list
-	if achievement_manager:
-		$UI/AchievementsScreen/ScrollContainer/AchievementsList.text = achievement_manager.get_achievements_text()
+	# Load achievement screen scene if not already loaded
+	var achievement_screen_path = "res://scenes/ui/achievement_screen.tscn"
+	var achievement_screen = null
+
+	if has_node("UI/AchievementScreen"):
+		achievement_screen = get_node("UI/AchievementScreen")
+	else:
+		var achievement_screen_scene = load(achievement_screen_path)
+		achievement_screen = achievement_screen_scene.instantiate()
+		$UI.add_child(achievement_screen)
+
+		# Connect back button signal
+		achievement_screen.back_pressed.connect(_on_achievements_back_button_pressed)
+
+	# Initialize achievement screen
+	achievement_screen.initialize(achievement_manager, language_manager)
 
 	# Show achievements screen
-	$UI/AchievementsScreen.visible = true
+	achievement_screen.visible = true
 
 # Achievements back button pressed
 func _on_achievements_back_button_pressed():
 	# Hide achievements screen
-	$UI/AchievementsScreen.visible = false
+	if has_node("UI/AchievementScreen"):
+		get_node("UI/AchievementScreen").visible = false
 
 	# Show game over screen
 	game_over_screen.visible = true
+
+# Achievement unlocked handler
+func _on_achievement_unlocked(achievement_id, achievement_name, achievement_description):
+	# Play achievement sound
+	if has_node("AudioManager"):
+		get_node("AudioManager").play_sound("achievement_unlocked")
+
+	# Show notification
+	achievement_manager.show_achievement_notification(achievement_id)
+
+	# Print achievement info
+	print("Achievement unlocked: " + achievement_name + " - " + achievement_description)
 
 # Home button pressed
 func _on_home_button_pressed():
@@ -1086,6 +1141,10 @@ func update_ui_text():
 	$UI/PauseScreen/PauseLabel.text = language_manager.get_translation("pause", "Pause")
 	$UI/PauseScreen/ResumeButton.text = language_manager.get_translation("resume", "Resume")
 	$UI/PauseScreen/QuitButton.text = language_manager.get_translation("quit", "Quit")
+	$UI/PauseScreen/ConsoleButton.text = language_manager.get_translation("console", "Console")
+
+	# 更新控制台界面文本
+	$UI/ConsolePanel/VBoxContainer/HeaderLabel.text = language_manager.get_translation("console", "Console")
 
 	# 更新遗物面板标题
 	$UI/GameUI/RelicsPanel/VBoxContainer/TitleLabel.text = language_manager.get_translation("relics", "遗物")
@@ -1138,6 +1197,14 @@ func _on_enemy_died(position, experience):
 	if achievement_manager:
 		achievement_manager.update_statistic("enemies_defeated", enemies_defeated)
 
+		# 我们可以在这里添加特定敌人类型的统计，但需要从敌人对象中获取类型
+		# 由于当前上下文中没有敌人类型信息，暂时注释掉这部分代码
+		# 如果需要跟踪特定敌人类型的击杀数，应该在敌人死亡时传递敌人类型
+		# 例如：
+		# if enemy and enemy.has("enemy_type"):
+		#     var enemy_type_stat = "enemies_defeated_" + enemy.enemy_type
+		#     achievement_manager.increment_statistic(enemy_type_stat)
+
 	# Spawn experience orb
 	spawn_experience_orb(position, experience)
 
@@ -1158,8 +1225,14 @@ func _notification(what):
 			enemy_spawner = null
 
 		if achievement_manager:
+			# Save achievements before freeing
+			achievement_manager.save_achievements_to_file()
 			achievement_manager.queue_free()
 			achievement_manager = null
 
 		# 退出游戏
 		get_tree().quit()
+
+# 获取语言管理器函数，供其他脚本调用
+func get_language_manager():
+	return language_manager

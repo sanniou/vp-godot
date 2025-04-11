@@ -118,6 +118,38 @@ func _process(delta):
 
 	return slash
 
+# 获取升级选项
+func get_upgrade_options() -> Array:
+	# 使用通用翻译辅助工具
+	var Tr = load("res://scripts/language/tr.gd")
+
+	return [
+		{
+			"type": "damage",
+			"name": Tr.weapon_upgrade("damage", "伤害 +10"),
+			"description": Tr.weapon_upgrade_desc("damage", "增加飞刀伤害"),
+			"icon": "💥"
+		},
+		{
+			"type": "attack_rate",
+			"name": Tr.weapon_upgrade("attack_speed", "攻击速度 +30%"),
+			"description": Tr.weapon_upgrade_desc("attack_speed", "增加飞刀投掷频率"),
+			"icon": "⚡"
+		},
+		{
+			"type": "range",
+			"name": Tr.weapon_upgrade("range", "范围 +20"),
+			"description": Tr.weapon_upgrade_desc("range", "增加飞刀攻击范围"),
+			"icon": "↔️"
+		},
+		{
+			"type": "angle",
+			"name": Tr.weapon_upgrade("special", "角度 +22.5°"),
+			"description": Tr.weapon_upgrade_desc("special", "增加飞刀攻击角度"),
+			"icon": "🔍"
+		}
+	]
+
 # 升级武器
 func upgrade(upgrade_type):
 	match upgrade_type:

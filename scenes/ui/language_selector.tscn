@@ -1,0 +1,82 @@
+[gd_scene load_steps=3 format=3 uid="uid://c8kqfxw5gvwqj"]
+
+[ext_resource type="Script" path="res://scripts/ui/language_selector.gd" id="1_yvj4r"]
+[ext_resource type="Texture2D" uid="uid://coae84ekk1xa0" path="res://assets/ui/language_icons.png" id="2_console"]
+
+[node name="LanguageSelector" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_yvj4r")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -150.0
+offset_right = 200.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "选择语言 / Select Language / 言語を選択"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="LanguageGrid" type="GridContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/h_separation = 20
+theme_override_constants/v_separation = 20
+columns = 2
+
+[node name="ChineseButton" type="Button" parent="Panel/VBoxContainer/LanguageGrid"]
+custom_minimum_size = Vector2(180, 60)
+layout_mode = 2
+text = "简体中文"
+
+[node name="EnglishButton" type="Button" parent="Panel/VBoxContainer/LanguageGrid"]
+custom_minimum_size = Vector2(180, 60)
+layout_mode = 2
+text = "English"
+
+[node name="JapaneseButton" type="Button" parent="Panel/VBoxContainer/LanguageGrid"]
+custom_minimum_size = Vector2(180, 60)
+layout_mode = 2
+text = "日本語"
+
+[node name="HSeparator2" type="HSeparator" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="CloseButton" type="Button" parent="Panel/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "关闭 / Close / 閉じる"
+
+[connection signal="pressed" from="Panel/VBoxContainer/LanguageGrid/ChineseButton" to="." method="_on_chinese_button_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/LanguageGrid/EnglishButton" to="." method="_on_english_button_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/LanguageGrid/JapaneseButton" to="." method="_on_japanese_button_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/CloseButton" to="." method="_on_close_button_pressed"]
