@@ -25,9 +25,9 @@ func _ready():
 
 	# 确保 HitBox 正确设置
 	if hit_box is Area2D:
-		# 启用碰撞检测
-		hit_box.monitoring = true
-		hit_box.monitorable = true
+		# 启用碰撞检测 - 使用 set_deferred 避免物理引擎冲突
+		hit_box.set_deferred("monitoring", true)
+		hit_box.set_deferred("monitorable", true)
 
 		# 打印调试信息
 		print("Player HitBox is properly set up as Area2D")
@@ -62,9 +62,18 @@ func take_damage(amount):
 	if is_invincible:
 		return
 
-	# 获取遗物管理器
+	# 获取主场景
 	var main = get_tree().current_scene
+
+	# 获取遗物管理器
 	var relic_manager = main.get_node_or_null("RelicManager") if main else null
+
+	# 获取成就管理器
+	var achievement_manager = main.get_node_or_null("AchievementManager") if main else null
+
+	# 更新伤害统计
+	if achievement_manager:
+		achievement_manager.increment_statistic("damage_taken", amount)
 
 	# 触发伤害事件，应用遗物效果
 	if relic_manager:

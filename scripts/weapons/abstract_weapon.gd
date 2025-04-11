@@ -80,13 +80,13 @@ func perform_attack() -> void:
         "weapon_type": weapon_type,
         "level": level
     }
-    
+
     # 触发攻击开始事件
     trigger_event(EventType.ATTACK_START, attack_data)
-    
+
     # 发出攻击信号
     attack_performed.emit(weapon_id, attack_data)
-    
+
     # 触发攻击结束事件
     trigger_event(EventType.ATTACK_END, attack_data)
 
@@ -99,13 +99,19 @@ func handle_enemy_hit(enemy, damage: float) -> void:
         "weapon_id": weapon_id,
         "critical": false
     }
-    
+
     hit_data = trigger_event(EventType.HIT_ENEMY, hit_data)
-    
+
     # 应用最终伤害
     if enemy.has_method("take_damage"):
         enemy.take_damage(hit_data.damage)
-    
+
+    # 更新伤害统计
+    var main = get_tree().current_scene
+    if main and main.has_node("AchievementManager"):
+        var achievement_manager = main.get_node("AchievementManager")
+        achievement_manager.increment_statistic("damage_dealt", hit_data.damage)
+
     # 发出击中敌人信号
     enemy_hit.emit(weapon_id, enemy, hit_data.damage)
 
@@ -117,9 +123,9 @@ func handle_enemy_killed(enemy, position: Vector2) -> void:
         "position": position,
         "weapon_id": weapon_id
     }
-    
+
     kill_data = trigger_event(EventType.KILL_ENEMY, kill_data)
-    
+
     # 发出击杀敌人信号
     enemy_killed.emit(weapon_id, enemy, position)
 
@@ -127,18 +133,18 @@ func handle_enemy_killed(enemy, position: Vector2) -> void:
 func trigger_event(event_type: int, event_data: Dictionary) -> Dictionary:
     # 这里可以添加武器特有的事件处理逻辑
     # 例如，某些武器可能在击中敌人时有特殊效果
-    
+
     # 获取主场景中的遗物管理器，让遗物也能响应武器事件
     var main = get_tree().current_scene
     if main and main.has_node("RelicManager"):
         var relic_manager = main.get_node("RelicManager")
-        
+
         # 添加武器信息到事件数据
         event_data["weapon"] = self
-        
+
         # 让遗物管理器处理事件
         event_data = relic_manager.trigger_event(event_type, event_data)
-    
+
     return event_data
 
 # 获取武器信息

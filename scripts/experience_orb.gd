@@ -21,8 +21,13 @@ func _ready():
 
 # 启用碰撞检测
 func _enable_collision():
-	set_deferred("monitoring", true)
-	set_deferred("monitorable", true)
+	# 使用 call_deferred 来确保在物理处理外调用
+	call_deferred("_safely_enable_collision")
+
+# 安全地启用碰撞检测
+func _safely_enable_collision():
+	monitoring = true
+	monitorable = true
 
 func _process(delta):
 	if is_attracting and target != null and is_instance_valid(target):

@@ -76,10 +76,10 @@ func die():
 	# Play death animation
 	var death_animation = create_tween()
 
-	# Disable collision
-	set_collision_layer_value(3, false)
-	set_collision_mask_value(1, false)
-	set_collision_mask_value(2, false)
+	# 使用 call_deferred 延迟禁用碰撞，避免在物理查询刷新时修改
+	call_deferred("set_collision_layer_value", 3, false)
+	call_deferred("set_collision_mask_value", 1, false)
+	call_deferred("set_collision_mask_value", 2, false)
 
 	# Hide health bar
 	if health_bar:

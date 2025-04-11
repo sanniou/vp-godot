@@ -45,10 +45,15 @@ func spray_toxin():
     # 获取攻击方向（朝向最近的敌人）
     var attack_direction = get_attack_direction()
 
-    # 创建喷雾效果
+    # 创建喇雾效果
     var spray = create_spray_effect(attack_direction)
-    get_tree().current_scene.add_child(spray)
-    spray.global_position = global_position
+
+    # 检查喇雾对象是否有效
+    if spray != null:
+        get_tree().current_scene.add_child(spray)
+        spray.global_position = global_position
+    else:
+        print("Warning: Failed to create spray effect")
 
     # 检测范围内的敌人并造成伤害
     var enemies = get_tree().get_nodes_in_group("enemies")
@@ -107,8 +112,9 @@ func create_spray_effect(direction):
     particles.gravity = Vector2(0, 0)
     particles.initial_velocity_min = spray_range / particles.lifetime * 0.8
     particles.initial_velocity_max = spray_range / particles.lifetime
-    particles.scale_amount = 3
-    particles.scale_amount_random = 0.5
+    # 设置粒子缩放范围（随机缩放）
+    particles.set_param_min(CPUParticles2D.PARAM_SCALE, 1.5)
+    particles.set_param_max(CPUParticles2D.PARAM_SCALE, 3.0)
     particles.color = Color(0.2, 0.8, 0.2, 0.7)  # 绿色
     spray.add_child(particles)
 
@@ -169,7 +175,8 @@ func create_poison_effect():
     effect.gravity = Vector2(0, -20)
     effect.initial_velocity_min = 5
     effect.initial_velocity_max = 10
-    effect.scale_amount = 2
+    effect.set_param_min(CPUParticles2D.PARAM_SCALE, 2.0)
+    effect.set_param_max(CPUParticles2D.PARAM_SCALE, 2.0)
     effect.color = Color(0.2, 0.8, 0.2, 0.5)  # 绿色
 
     # 添加脚本
