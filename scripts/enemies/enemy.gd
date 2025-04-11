@@ -61,6 +61,15 @@ func die():
 	# Debug output
 	print("Enemy died at position: ", global_position, " with experience: ", experience_value)
 
+	# Apply life steal from Vampiric Fang relic
+	var main = get_tree().current_scene
+	if main and main.has_node("RelicManager"):
+		var relic_manager = main.get_node("RelicManager")
+		if relic_manager.has_method("apply_life_steal"):
+			var player = get_tree().get_nodes_in_group("player")[0] if get_tree().get_nodes_in_group("player").size() > 0 else null
+			if player:
+				relic_manager.apply_life_steal(player)
+
 	# Emit signal with position and experience value
 	died.emit(global_position, experience_value)
 

@@ -1,36 +1,19 @@
 extends Node2D
 class_name EnemySpawner
 
-# Enemy types
-var enemy_types = {
-	"basic": {
-		"color": Color(1.0, 0.2, 0.2, 1.0),
-		"max_health": 100,
-		"move_speed": 100,
-		"damage": 10,
-		"experience_value": 5,
-		"size": 25
-	},
-	"strong": {
-		"color": Color(0.2, 0.2, 1.0, 1.0),
-		"max_health": 200,
-		"move_speed": 80,
-		"damage": 20,
-		"experience_value": 15,
-		"size": 35
-	},
-	"ranged": {
-		"color": Color(0.8, 0.2, 0.8, 1.0),
-		"max_health": 50,
-		"move_speed": 70,
-		"damage": 15,
-		"experience_value": 10,
-		"size": 25,
-		"is_ranged": true,
-		"attack_range": 300,
-		"attack_cooldown": 2.0
-	}
+# 预加载类
+const EnemyFactory = preload("res://scripts/enemies/enemy_factory.gd")
+
+# 敌人类型
+enum EnemyType {
+    MELEE,      # 近战敌人
+    RANGED,     # 远程敌人
+    ELITE,      # 精英敌人
+    BOSS        # Boss敌人
 }
+
+# 敌人生成器
+var enemy_factory = null
 
 # Load scenes in _ready to avoid preload errors
 # Spawn settings
@@ -43,170 +26,104 @@ var difficulty = 0  # Increases over time
 var player = null
 
 func _ready():
-	# Find player
+	# 初始化敌人工厂
+	enemy_factory = EnemyFactory.new()
+
+	# 查找玩家
 	var players = get_tree().get_nodes_in_group("player")
 	if players.size() > 0:
 		player = players[0]
 
-# Spawn an enemy at a random position around the player
+# 在玩家周围随机位置生成敌人
 func spawn_enemy():
-	print("EnemySpawner: spawn_enemy called, player: ", player)
+	# print("EnemySpawner: spawn_enemy called, player: ", player)
 	if player == null or !is_instance_valid(player):
-		# Try to find player again
+		# 尝试重新查找玩家
 		var players = get_tree().get_nodes_in_group("player")
 		if players.size() > 0:
 			player = players[0]
 		else:
-			return  # No player, don't spawn
+			return  # 没有玩家，不生成敌人
 
-	# Check if we've reached the maximum number of enemies
+	# 检查是否达到最大敌人数量
 	var current_enemies = get_tree().get_nodes_in_group("enemies")
 	if current_enemies.size() >= max_enemies:
 		return
 
-	# Determine which enemy type to spawn based on difficulty
-	var enemy_type = "basic"
+	# 根据难度确定敌人类型
+	var enemy_type = EnemyType.MELEE
+	var enemy_level = 1 + int(difficulty / 2)  # 每2分钟提升一级
 	var random_value = randf()
 
-	# Always spawn basic enemies at the beginning
+	# 开始时只生成近战敌人
 	if difficulty == 0:
-		enemy_type = "basic"
-	# After difficulty 5, start spawning ranged enemies
+		enemy_type = EnemyType.MELEE
+	# 10分钟后，有小概率生成Boss
+	elif difficulty >= 10 and random_value < 0.05:
+		enemy_type = EnemyType.BOSS
+	# 5分钟后，有概率生成精英敌人
 	elif difficulty >= 5 and random_value < 0.15 + (difficulty * 0.005):
-		enemy_type = "ranged"
-	# Chance of strong enemy increases with difficulty
-	elif random_value < 0.2 + (difficulty * 0.01):
-		enemy_type = "strong"
-	# Default to basic enemy
+		enemy_type = EnemyType.ELITE
+	# 2分钟后，有概率生成远程敌人
+	elif difficulty >= 2 and random_value < 0.2 + (difficulty * 0.01):
+		enemy_type = EnemyType.RANGED
+	# 默认生成近战敌人
 	else:
-		enemy_type = "basic"
+		enemy_type = EnemyType.MELEE
 
-	# Create enemy instance
-	var enemy = create_enemy(enemy_type)
+	# 创建敌人实例
+	var enemy = enemy_factory.create_enemy(enemy_type, enemy_level)
 
-	# Set spawn position
+	# 设置生成位置
 	var spawn_direction = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
 	var spawn_distance = randf_range(min_spawn_distance, spawn_radius)
 	var spawn_position = player.global_position + (spawn_direction * spawn_distance)
 
-	# Set enemy properties
+	# 检查敌人是否有效
+	if enemy == null:
+		push_error("Enemy creation failed")
+		return
+
+	# 设置敌人属性
 	enemy.global_position = spawn_position
-	enemy.target = player
 
-	# Scale enemy stats based on difficulty
-	enemy.max_health = int(enemy.max_health * (1 + difficulty * 0.1))
-	enemy.current_health = enemy.max_health
-	enemy.damage = int(enemy.damage * (1 + difficulty * 0.05))
-	enemy.experience_value = int(enemy.experience_value * (1 + difficulty * 0.02))
+	# 安全地设置目标
+	if "target" in enemy:
+		enemy.target = player
 
-	# Connect signals
-	enemy.died.connect(_on_enemy_died)
+	# 根据难度安全地调整敌人属性
+	if "max_health" in enemy:
+		enemy.max_health = int(enemy.max_health * (1 + difficulty * 0.1))
 
-	# Add to scene
+	if "current_health" in enemy and "max_health" in enemy:
+		enemy.current_health = enemy.max_health
+
+	if "attack_damage" in enemy:
+		enemy.attack_damage = int(enemy.attack_damage * (1 + difficulty * 0.05))
+
+	if "experience_value" in enemy:
+		enemy.experience_value = int(enemy.experience_value * (1 + difficulty * 0.02))
+
+	# 更新生命条
+	var health_bar = enemy.find_child("ProgressBar")
+	if health_bar and "max_health" in enemy and "current_health" in enemy:
+		health_bar.max_value = enemy.max_health
+		health_bar.value = enemy.current_health
+
+	# 安全地连接信号
+	if enemy.has_signal("died"):
+		if not enemy.died.is_connected(_on_enemy_died):
+			enemy.died.connect(_on_enemy_died)
+
+	# 添加到场景
 	get_tree().current_scene.add_child(enemy)
 
-# Create an enemy of the specified type
-func create_enemy(type_name):
-	# Get enemy properties
-	var properties = enemy_types[type_name]
+	# print("EnemySpawner: Enemy spawned at position: ", spawn_position)
 
-	# Create enemy node
-	var enemy = CharacterBody2D.new()
-	enemy.add_to_group("enemies")
-	enemy.collision_layer = 4  # Enemy layer
-	enemy.collision_mask = 3   # World and player layers
-
-	# Create visual representation
-	var rect = ColorRect.new()
-	rect.color = properties.color
-	rect.size = Vector2(properties.size * 2, properties.size * 2)
-	rect.position = Vector2(-properties.size, -properties.size)
-	enemy.add_child(rect)
-
-	# Create collision shape
-	var collision = CollisionShape2D.new()
-	var shape = CircleShape2D.new()
-	shape.radius = properties.size
-	collision.shape = shape
-	enemy.add_child(collision)
-
-	# Create health bar
-	var health_bar = ProgressBar.new()
-	health_bar.max_value = properties.max_health
-	health_bar.value = properties.max_health
-	health_bar.show_percentage = false
-	health_bar.size = Vector2(properties.size * 2 + 10, 5)
-	health_bar.position = Vector2(-properties.size - 5, -properties.size - 15)
-	enemy.add_child(health_bar)
-
-	# We'll set properties in the script instead
-
-	# Create script for enemy
-	var script = GDScript.new()
-	# Create script with properties from enemy type
-	var script_code = "extends CharacterBody2D\n\n"
-	script_code += "# Enemy properties\n"
-	script_code += "var max_health = %d\n" % properties.max_health
-	script_code += "var current_health = %d\n" % properties.max_health
-	script_code += "var move_speed = %d\n" % properties.move_speed
-	script_code += "var damage = %d\n" % properties.damage
-	script_code += "var experience_value = %d\n\n" % properties.experience_value
-
-	script_code += "# Target to follow\n"
-	script_code += "var target = null\n\n"
-	script_code += "# Signal for death\n"
-	script_code += "signal died(position, experience)\n\n"
-
-	script_code += "func _physics_process(delta):\n"
-	script_code += "\tif target == null or !is_instance_valid(target):\n"
-	script_code += "\t\t# Try to find player if target is lost\n"
-	script_code += "\t\tvar players = get_tree().get_nodes_in_group(\"player\")\n"
-	script_code += "\t\tif players.size() > 0:\n"
-	script_code += "\t\t\ttarget = players[0]\n"
-	script_code += "\t\telse:\n"
-	script_code += "\t\t\treturn  # No target, don't move\n\n"
-
-	script_code += "\t# Move towards target\n"
-	script_code += "\tvar direction = (target.global_position - global_position).normalized()\n"
-	script_code += "\tvelocity = direction * move_speed\n"
-	script_code += "\tmove_and_slide()\n\n"
-
-	script_code += "\t# Check for collision with player\n"
-	script_code += "\tfor i in get_slide_collision_count():\n"
-	script_code += "\t\tvar collision = get_slide_collision(i)\n"
-	script_code += "\t\tif collision.get_collider().is_in_group(\"player\"):\n"
-	script_code += "\t\t\tcollision.get_collider().take_damage(damage)\n\n"
-
-	script_code += "# Take damage\n"
-	script_code += "func take_damage(amount):\n"
-	script_code += "\tcurrent_health -= amount\n\n"
-
-	script_code += "\t# Update health bar\n"
-	script_code += "\tfor child in get_children():\n"
-	script_code += "\t\tif child is ProgressBar:\n"
-	script_code += "\t\t\tchild.value = current_health\n\n"
-
-	script_code += "\t# Check for death\n"
-	script_code += "\tif current_health <= 0:\n"
-	script_code += "\t\tdie()\n\n"
-
-	script_code += "# Die and drop experience\n"
-	script_code += "func die():\n"
-	script_code += "\t# Emit signal with position and experience value\n"
-	script_code += "\temit_signal(\"died\", global_position, experience_value)\n\n"
-
-	script_code += "\t# Remove from scene\n"
-	script_code += "\tqueue_free()\n"
-
-	script.source_code = script_code
-	script.reload()
-	enemy.set_script(script)
-
-	# Connect death signal if not already connected
-	if !enemy.died.is_connected(_on_enemy_died):
-		enemy.died.connect(_on_enemy_died)
-
-	return enemy
+# 创建特定类型的敌人
+func create_enemy(enemy_type, level = 1):
+	# 使用敌人工厂创建敌人
+	return enemy_factory.create_enemy(enemy_type, level)
 
 # Increase difficulty
 func increase_difficulty():
@@ -221,7 +138,19 @@ signal enemy_died(position, experience)
 # Handle enemy death
 func _on_enemy_died(position, experience):
 	# Debug output
-	print("Enemy spawner received death signal at position: ", position, " with experience: ", experience)
+	# print("Enemy spawner received death signal at position: ", position, " with experience: ", experience)
 
 	# Forward the signal to the main scene
 	enemy_died.emit(position, experience)
+
+# 在节点被移除时清理资源
+func _exit_tree():
+	# 清理敌人工厂
+	if enemy_factory != null:
+		enemy_factory = null
+
+	# 清理敌人
+	var enemies = get_tree().get_nodes_in_group("enemies")
+	for enemy in enemies:
+		if is_instance_valid(enemy):
+			enemy.queue_free()

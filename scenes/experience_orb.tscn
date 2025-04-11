@@ -8,6 +8,8 @@ radius = 10.0
 [node name="ExperienceOrb" type="Area2D" groups=["experience"]]
 collision_layer = 16
 collision_mask = 2
+monitoring = false
+monitorable = false
 script = ExtResource("1_yvj4r")
 
 [node name="ColorRect" type="ColorRect" parent="."]

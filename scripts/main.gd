@@ -1,5 +1,9 @@
 extends Node2D
 
+# 预加载类
+const AbstractRelic = preload("res://scripts/relics/abstract_relic.gd")
+const RelicManager = preload("res://scripts/relics/relic_manager.gd")
+
 # Game state variables
 var game_time = 0
 var game_running = true
@@ -14,11 +18,34 @@ var difficulty_increase_interval = 60.0  # Increase difficulty every minute
 # Scenes
 var player_scene = preload("res://scenes/player/player.tscn")
 var experience_orb_scene = preload("res://scenes/experience_orb.tscn")
+
+# Weapon scenes
 var magic_wand_scene = preload("res://scenes/weapons/magic_wand.tscn")
 var flamethrower_scene = preload("res://scenes/weapons/flamethrower.tscn")
+var gun_scene = preload("res://scenes/weapons/gun.tscn")
+var knife_scene = preload("res://scenes/weapons/knife.tscn")
+var shield_scene = preload("res://scenes/weapons/shield.tscn")
+var lightning_scene = preload("res://scenes/weapons/lightning.tscn")
 
 # Achievement manager
 var achievement_manager = null
+
+# Relic manager
+var relic_manager = null
+
+# 预加载遗物管理器脚本
+var relic_manager_script = preload("res://scripts/relics/relic_manager.gd")
+
+# Weapon manager
+var weapon_manager = null
+
+# Regeneration timer for Golden Apple relic
+var regeneration_timer = 0
+
+# 升级选项相关
+var current_upgrade_options = []  # 当前显示的升级选项
+var max_rerolls = 3  # 每个选项最多重新随机次数
+var option_rerolls = {}  # 存储每个选项已使用的重新随机次数
 
 # References
 var player = null
@@ -78,6 +105,15 @@ func _ready():
 	achievement_manager.set_script(load("res://scripts/achievement_manager.gd"))
 	add_child(achievement_manager)
 
+	# Initialize relic manager
+	relic_manager = Node.new()
+	relic_manager.set_script(load("res://scripts/relics/relic_manager.gd"))
+	relic_manager.name = "RelicManager"
+	add_child(relic_manager)
+
+	# Load selected relics from global
+	load_selected_relics()
+
 	# Show start screen
 	show_start_screen()
 
@@ -108,6 +144,14 @@ func _process(delta):
 			difficulty_increase_timer = 0
 			increase_difficulty()
 
+		# Handle regeneration from Golden Apple relic
+		if player and relic_manager and relic_manager.has_relic("golden_apple"):
+			regeneration_timer += delta
+			var relic = relic_manager.get_relic("golden_apple")
+			if regeneration_timer >= relic.interval:
+				regeneration_timer = 0
+				player.heal(relic.value)
+
 # Start or restart the game
 func start_game():
 	# Reset game state
@@ -119,6 +163,7 @@ func start_game():
 	enemy_spawn_timer = 0
 	enemy_spawn_interval = 1.0
 	difficulty_increase_timer = 0
+	regeneration_timer = 0
 
 	# Reset achievement statistics
 	if achievement_manager:
@@ -153,15 +198,61 @@ func start_game():
 	player.health_changed.connect(_on_player_health_changed)
 	player.died.connect(_on_player_died)
 
+	# Initialize weapon manager
+	weapon_manager = Node.new()
+	weapon_manager.set_script(load("res://scripts/weapons/weapon_manager.gd"))
+
+	# 设置武器容器
+	weapon_manager.set_weapon_container(player.weapon_container)
+
 	# Give player initial weapon
-	var wand = magic_wand_scene.instantiate()
+	# 暂时使用默认武器
+	var wand = load("res://scenes/weapons/magic_wand.tscn").instantiate()
 	player.weapon_container.add_child(wand)
 
+	# 触发游戏开始事件，应用遗物效果
+	if relic_manager:
+		var event_data = {
+			"player": player,
+			"health_bar": health_bar,
+			"experience_bar": experience_bar
+		}
+
+		# 触发游戏开始事件
+		var modified_data = relic_manager.trigger_event(AbstractRelic.EventType.GAME_START, event_data)
+
+		# 处理修改后的数据
+		if modified_data.has("stat_boosts"):
+			var stat_boosts = modified_data["stat_boosts"]
+
+			# 应用属性加成
+			if stat_boosts.has("max_health"):
+				player.max_health += stat_boosts["max_health"]
+				player.current_health = player.max_health
+				health_bar.max_value = player.max_health
+				health_bar.value = player.current_health
+
+			if stat_boosts.has("move_speed"):
+				player.move_speed += stat_boosts["move_speed"]
+
+		# 处理自动升级
+		if modified_data.has("auto_level_up") and modified_data["auto_level_up"]:
+			# 在下一帧自动升级，避免在初始化过程中升级
+			await get_tree().process_frame
+			# 直接调用升级函数，不需要经验值
+			player_level += 1
+
+			# 计算新的升级所需经验值
+			experience_to_level = int(experience_to_level * 1.2)  # 增加下一级所需的经验值
+
+			# 显示升级效果
+			show_level_up_screen()
+
 	# Reset enemy spawner
-	print("Setting enemy_spawner.player to: ", player)
+	# print("Setting enemy_spawner.player to: ", player)
 	enemy_spawner.player = player
 	enemy_spawner.difficulty = 0
-	print("Enemy spawner reset, player: ", enemy_spawner.player, ", difficulty: ", enemy_spawner.difficulty)
+	# print("Enemy spawner reset, player: ", enemy_spawner.player, ", difficulty: ", enemy_spawner.difficulty)
 
 # Update the timer display
 func update_timer_display():
@@ -171,7 +262,7 @@ func update_timer_display():
 
 # Spawn an enemy
 func spawn_enemy():
-	print("Main: Attempting to spawn enemy")
+	# print("Main: Attempting to spawn enemy")
 	enemy_spawner.spawn_enemy()
 
 # Increase game difficulty
@@ -218,8 +309,36 @@ func increase_difficulty():
 
 # Add experience to the player
 func add_experience(amount):
-	# Debug output
-	print("Adding experience to player: ", amount, ", current experience: ", player_experience)
+	# 在发布版本中去掉调试日志
+	# print("Adding experience to player: ", amount, ", current experience: ", player_experience)
+
+	# 触发经验获取事件，应用遗物效果
+	if relic_manager:
+		var event_data = {
+			"experience": amount,
+			"player": player
+		}
+
+		# 触发经验获取事件
+		var modified_data = relic_manager.trigger_event(2, event_data)  # 2 = EXPERIENCE_GAIN
+
+		# 获取修改后的经验值
+		amount = modified_data["experience"]
+
+		# 显示经验加成效果（如果有）
+		if modified_data.has("bonus_exp") and modified_data["bonus_exp"] > 0:
+			var bonus = modified_data["bonus_exp"]
+			var bonus_label = Label.new()
+			bonus_label.text = "+" + str(int(bonus)) + " 经验"
+			bonus_label.position = Vector2(-30, -30)
+			bonus_label.modulate = Color(0.5, 1.0, 0.5, 1.0)
+			player.add_child(bonus_label)
+
+			# 动画效果
+			var tween = player.create_tween()
+			tween.tween_property(bonus_label, "position:y", -50, 0.5)
+			tween.parallel().tween_property(bonus_label, "modulate:a", 0, 0.5)
+			tween.tween_callback(func(): bonus_label.queue_free())
 
 	player_experience += amount
 	experience_bar.value = player_experience
@@ -229,7 +348,7 @@ func add_experience(amount):
 		achievement_manager.increment_statistic("experience_collected", amount)
 
 	# Debug output
-	print("New experience: ", player_experience, ", experience bar value: ", experience_bar.value)
+	# print("New experience: ", player_experience, ", experience bar value: ", experience_bar.value)
 
 	# Check for level up
 	if player_experience >= experience_to_level:
@@ -239,7 +358,24 @@ func add_experience(amount):
 func level_up():
 	player_level += 1
 	player_experience -= experience_to_level
+
+	# Calculate new experience to level
 	experience_to_level = int(experience_to_level * 1.2)  # Increase XP needed for next level
+
+	# 触发升级事件，应用遗物效果
+	if relic_manager:
+		var event_data = {
+			"player": player,
+			"level": player_level,
+			"experience_to_level": experience_to_level
+		}
+
+		# 触发升级事件
+		var modified_data = relic_manager.trigger_event(1, event_data)  # 1 = LEVEL_UP
+
+		# 获取修改后的数据
+		if modified_data.has("experience_to_level"):
+			experience_to_level = modified_data["experience_to_level"]
 
 	experience_bar.max_value = experience_to_level
 	experience_bar.value = player_experience
@@ -264,47 +400,163 @@ func show_level_up_screen():
 	for child in upgrade_options.get_children():
 		child.queue_free()
 
-	# Generate upgrade options
-	var options = [
+	# 重置重新随机计数器
+	option_rerolls.clear()
+
+	# 生成升级选项基础池
+	var base_options = [
 		{"type": "max_health", "name": "Max Health +20", "description": "Increase maximum health by 20", "amount": 20},
 		{"type": "move_speed", "name": "Move Speed +20", "description": "Increase movement speed by 20", "amount": 20},
 		{"type": "weapon_damage", "name": "Weapon Damage +20%", "description": "Increase all weapon damage by 20%", "amount": 0.2}
 	]
 
-	# Add weapon options
-	var has_flamethrower = false
-	for weapon in player.weapon_container.get_children():
-		if weapon.name == "Flamethrower":
-			has_flamethrower = true
-			break
+	# 如果有遗物管理器，允许遗物修改基础选项
+	if relic_manager and relic_manager.has_method("modify_upgrade_options"):
+		base_options = relic_manager.modify_upgrade_options(base_options)
 
-	# Add flamethrower if player doesn't have it yet
-	if !has_flamethrower:
-		options.append({"type": "new_weapon", "name": "Flamethrower", "description": "A weapon that deals continuous damage in a cone", "weapon": flamethrower_scene})
+	# 获取当前可用的重新随机次数
+	max_rerolls = 3  # 默认值
+	if relic_manager and relic_manager.has_method("get_reroll_count"):
+		max_rerolls = relic_manager.get_reroll_count()
+
+	# 检查玩家拥有的武器
+	var available_weapons = ["flamethrower", "gun", "knife", "shield", "lightning"]
+	var has_weapons = {}
+
+	# 使用武器管理器获取已装备武器
+	if weapon_manager:
+		# 添加武器升级选项
+		for weapon_id in weapon_manager.equipped_weapons:
+			has_weapons[weapon_id] = true
+
+			# 获取武器实例
+			var weapon = weapon_manager.get_weapon(weapon_id)
+			if weapon:
+				# 安全地获取武器升级选项
+				var weapon_options = []
+				if weapon.has_method("get_upgrade_options"):
+					weapon_options = weapon.get_upgrade_options()
+				else:
+					# 默认选项
+					weapon_options = [
+						{"type": 0, "name": "伤害 +5", "description": "增加武器伤害", "icon": "💥"},
+						{"type": 1, "name": "攻击速度 +20%", "description": "增加武器攻击速度", "icon": "⚡"}
+					]
+
+				# 添加到选项列表
+				for option in weapon_options:
+					base_options.append({
+						"type": "weapon_upgrade",
+						"weapon": weapon,
+						"upgrade_type": option.type,
+						"name": option.name,
+						"description": option.description,
+						"icon": option.icon if "icon" in option else ""
+					})
+
+	# 添加新武器选项
+	for weapon_id in available_weapons:
+		if not has_weapons.has(weapon_id):
+			# 根据武器ID获取对应的场景
+			var weapon_scene = null
+			var weapon_name = ""
+			var weapon_description = ""
+
+			match weapon_id:
+				"flamethrower":
+					weapon_scene = flamethrower_scene
+					weapon_name = "Flamethrower"
+					weapon_description = "A weapon that deals continuous damage in a cone"
+				"gun":
+					weapon_scene = gun_scene
+					weapon_name = "Gun"
+					weapon_description = "A weapon that fires bullets at enemies"
+				"knife":
+					weapon_scene = knife_scene
+					weapon_name = "Knife"
+					weapon_description = "A melee weapon that damages enemies in a wide arc"
+				"shield":
+					weapon_scene = shield_scene
+					weapon_name = "Shield"
+					weapon_description = "Protects from damage and burns nearby enemies"
+				"lightning":
+					weapon_scene = lightning_scene
+					weapon_name = "Lightning"
+					weapon_description = "Strikes enemies with chain lightning"
+
+			# 添加到选项列表
+			if weapon_scene:
+				base_options.append({
+					"type": "new_weapon",
+					"name": weapon_name,
+					"description": weapon_description,
+					"weapon": weapon_scene
+				})
 
 	# Shuffle options
-	options.shuffle()
+	base_options.shuffle()
 
-	# Create buttons for each option (up to 3)
-	for i in range(min(3, options.size())):
-		var option = options[i]
+	# 获取升级选项数量
+	var num_options = 3  # 默认值
+
+	# 使用遗物管理器获取升级选项数量
+	if relic_manager:
+		num_options = relic_manager.get_upgrade_options_count()
+
+	# 保存当前选项以供重新随机使用
+	current_upgrade_options = base_options.duplicate(true)
+
+	# Create buttons for each option
+	for i in range(min(num_options, base_options.size())):
+		var option = base_options[i]
+
+		# 创建选项容器
+		var option_container = VBoxContainer.new()
+		option_container.custom_minimum_size = Vector2(300, 120)
+		option_container.size_flags_horizontal = Control.SIZE_FILL
+		option_container.size_flags_vertical = Control.SIZE_FILL
+
+		# 创建选项按钮
 		var button = Button.new()
 		button.text = option.name + "\n" + option.description
 		button.custom_minimum_size = Vector2(300, 80)
+		button.size_flags_horizontal = Control.SIZE_FILL
+		button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 		# Connect button press based on option type
-		if option.type == "new_weapon":
-			button.pressed.connect(func(): select_upgrade(option.type, null, option.weapon))
-		else:
-			button.pressed.connect(func(): select_upgrade(option.type, option.amount))
+		match option.type:
+			"new_weapon":
+				button.pressed.connect(func(): select_upgrade(option.type, null, option.weapon))
+			"weapon_upgrade":
+				button.pressed.connect(func(): select_upgrade(option.type, null, null, option.weapon, option.upgrade_type))
+			_:
+				button.pressed.connect(func(): select_upgrade(option.type, option.amount))
 
-		upgrade_options.add_child(button)
+		# 创建重新随机按钮
+		var reroll_button = Button.new()
+		reroll_button.text = "Reroll (0/" + str(max_rerolls) + ")"
+		reroll_button.custom_minimum_size = Vector2(300, 30)
+		reroll_button.size_flags_horizontal = Control.SIZE_FILL
+
+		# 设置重新随机按钮的标识
+		reroll_button.set_meta("option_index", i)
+
+		# 初始化重新随机计数器
+		option_rerolls[i] = 0
+
+		# 连接重新随机按钮事件
+		reroll_button.pressed.connect(func(): reroll_option(i, reroll_button))
+
+		# 添加到容器
+		option_container.add_child(button)
+		option_container.add_child(reroll_button)
+		upgrade_options.add_child(option_container)
 
 	# Show the screen
 	level_up_screen.visible = true
 
 # Handle player selecting an upgrade
-func select_upgrade(upgrade_type, upgrade_amount = null, weapon_scene = null):
+func select_upgrade(upgrade_type, upgrade_amount = null, weapon_scene = null, target_weapon = null, weapon_upgrade_type = null):
 	# Apply the selected upgrade
 	match upgrade_type:
 		"max_health":
@@ -315,17 +567,79 @@ func select_upgrade(upgrade_type, upgrade_amount = null, weapon_scene = null):
 			player.upgrade_stat("move_speed", upgrade_amount)
 		"weapon_damage":
 			# Increase damage for all weapons
-			for weapon in player.weapon_container.get_children():
-				weapon.damage = int(weapon.damage * (1 + upgrade_amount))
+			if weapon_manager:
+				for weapon_id in weapon_manager.equipped_weapons:
+					var weapon = weapon_manager.get_weapon(weapon_id)
+					if weapon and "damage" in weapon:
+						weapon.damage = int(weapon.damage * (1 + upgrade_amount))
 		"new_weapon":
 			# Add new weapon to player
-			if weapon_scene:
-				var weapon = weapon_scene.instantiate()
-				player.weapon_container.add_child(weapon)
+			if weapon_scene and weapon_manager:
+				# 从场景路径中提取武器ID
+				var path = weapon_scene.resource_path
+				var weapon_id = path.get_file().get_basename().replace(".tscn", "")
+
+				# 添加武器
+				weapon_manager.add_weapon(weapon_id)
+		"weapon_upgrade":
+			# Upgrade specific weapon
+			if target_weapon and weapon_manager:
+				# 获取武器ID
+				var weapon_id = target_weapon.name.to_lower()
+
+				# 升级武器
+				weapon_manager.upgrade_weapon(weapon_id, weapon_upgrade_type)
 
 	# Hide level up screen and resume game
 	level_up_screen.visible = false
 	get_tree().paused = false
+
+# 重新随机升级选项
+func reroll_option(option_index, reroll_button):
+	# 检查是否还有重新随机次数
+	if option_rerolls[option_index] >= max_rerolls:
+		return
+
+	# 增加重新随机计数器
+	option_rerolls[option_index] += 1
+
+	# 更新重新随机按钮文本
+	reroll_button.text = "Reroll (" + str(option_rerolls[option_index]) + "/" + str(max_rerolls) + ")"
+
+	# 如果达到最大重新随机次数，禁用按钮
+	if option_rerolls[option_index] >= max_rerolls:
+		reroll_button.disabled = true
+
+	# 获取当前选项容器
+	var option_container = reroll_button.get_parent()
+	var option_button = option_container.get_child(0)  # 第一个子节点是选项按钮
+
+	# 从当前选项池中随机选择一个新选项
+	var available_options = current_upgrade_options.duplicate(true)
+	available_options.shuffle()
+
+	# 如果有遗物管理器，允许遗物修改重新随机结果
+	if relic_manager and relic_manager.has_method("modify_rerolled_options"):
+		available_options = relic_manager.modify_rerolled_options(option_index, option_rerolls[option_index], available_options)
+
+	# 选择一个新选项
+	var new_option = available_options[0]
+
+	# 更新选项按钮文本
+	option_button.text = new_option.name + "\n" + new_option.description
+
+	# 断开原有的信号连接
+	for connection in option_button.pressed.get_connections():
+		option_button.pressed.disconnect(connection.callable)
+
+	# 连接新的信号
+	match new_option.type:
+		"new_weapon":
+			option_button.pressed.connect(func(): select_upgrade(new_option.type, null, new_option.weapon))
+		"weapon_upgrade":
+			option_button.pressed.connect(func(): select_upgrade(new_option.type, null, null, new_option.weapon, new_option.upgrade_type))
+		_:
+			option_button.pressed.connect(func(): select_upgrade(new_option.type, new_option.amount))
 
 # Show start screen
 func show_start_screen():
@@ -340,17 +654,29 @@ func show_start_screen():
 
 # Start button pressed
 func _on_start_button_pressed():
-	# Hide start screen
+	# 检查是否已经有遗物选择场景
+	if has_node("RelicSelection"):
+		print("Relic selection scene already exists")
+		return
+
+	# 暂停游戏
+	get_tree().paused = true
+
+	# 创建遗物选择场景
+	var relic_selection_scene = load("res://scenes/relic_selection.tscn")
+	var relic_selection = relic_selection_scene.instantiate()
+
+	# 添加到场景树
+	add_child(relic_selection)
+
+	# 设置遗物选择场景的属性
+	relic_selection.main_scene_instance = self
+
+	# 隐藏开始界面
 	start_screen.visible = false
 
-	# Show game UI
-	game_ui.visible = true
-
-	# Start the game
-	start_game()
-
-	# Resume the game
-	get_tree().paused = false
+	# 打印调试信息
+	print("Relic selection scene added to main scene")
 
 # Toggle pause state
 func toggle_pause():
@@ -444,7 +770,7 @@ func _on_achievements_back_button_pressed():
 # Spawn an experience orb at the given position
 func spawn_experience_orb(position, value):
 	# Debug output
-	print("Spawning experience orb at position: ", position, " with value: ", value)
+	# print("Spawning experience orb at position: ", position, " with value: ", value)
 
 	var orb = experience_orb_scene.instantiate()
 	orb.global_position = position
@@ -452,13 +778,33 @@ func spawn_experience_orb(position, value):
 	game_world.add_child(orb)
 
 	# Debug output
-	print("Experience orb added to scene")
+	# print("Experience orb added to scene")
 
 # Player signal handlers
 func _on_player_health_changed(new_health):
 	health_bar.value = new_health
 
 func _on_player_died():
+	# 触发玩家死亡事件，应用遗物效果
+	if relic_manager:
+		var event_data = {
+			"player": player,
+			"prevent_death": false,
+			"heal_percent": 0
+		}
+
+		# 触发玩家死亡事件
+		var modified_data = relic_manager.trigger_event(4, event_data)  # 4 = PLAYER_DEATH
+
+		# 检查是否防止死亡
+		if modified_data["prevent_death"]:
+			# 恢复生命值
+			var heal_amount = player.max_health * modified_data["heal_percent"]
+			player.current_health = heal_amount
+			health_bar.value = player.current_health
+			return
+
+	# 如果没有防止死亡，则游戏结束
 	game_over()
 
 # Spawn a wave of enemies
@@ -521,10 +867,24 @@ func show_difficulty_message(message):
 	await tween.finished
 	label.queue_free()
 
+# Load selected relics from global
+func load_selected_relics():
+	# Check if RelicGlobal exists
+	var relic_global = Engine.get_main_loop().root.get_node_or_null("RelicGlobal")
+	if relic_global:
+		# Equip selected relics
+		for relic_id in relic_global.selected_relics:
+			relic_manager.equip_relic(relic_id)
+
+		# Debug output
+		# print("Equipped relics: ", relic_manager.get_equipped_relics_info())
+
+
+
 # Enemy signal handlers
 func _on_enemy_died(position, experience):
 	# Debug output
-	print("Main scene received enemy_died signal at position: ", position, " with experience: ", experience)
+	# print("Main scene received enemy_died signal at position: ", position, " with experience: ", experience)
 
 	# Increment enemy defeat counter
 	enemies_defeated += 1
@@ -535,3 +895,26 @@ func _on_enemy_died(position, experience):
 
 	# Spawn experience orb
 	spawn_experience_orb(position, experience)
+
+# 处理游戏退出时的资源释放
+func _notification(what):
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		# 清理资源
+		if weapon_manager:
+			weapon_manager.queue_free()
+			weapon_manager = null
+
+		if relic_manager:
+			relic_manager.queue_free()
+			relic_manager = null
+
+		if enemy_spawner:
+			enemy_spawner.queue_free()
+			enemy_spawner = null
+
+		if achievement_manager:
+			achievement_manager.queue_free()
+			achievement_manager = null
+
+		# 退出游戏
+		get_tree().quit()
