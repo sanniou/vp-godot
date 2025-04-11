@@ -1,0 +1,34 @@
+name: Game Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * *'  # 每天 UTC 时间 00:00 运行
+
+jobs:
+  test:
+    name: Run Game Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Godot
+      uses: chickensoft-games/setup-godot@v1
+      with:
+        version: 4.4.1-stable
+        use-dotnet: false
+    
+    - name: Run all tests
+      run: godot --headless --script res://test/run_tests.gd --verbose --log
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: ~/.local/share/godot/app_userdata/*/test_results.log
+        if-no-files-found: warn
