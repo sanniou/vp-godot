@@ -71,7 +71,15 @@ func generate_relic_grid():
 		{"id": "magnetic_amulet", "name": "磁力护符", "description": "经验球吸取范围增加50%，经验值增加20%", "icon": "🧲", "rarity": "common"},
 		{"id": "heart_amulet", "name": "生命护符", "description": "最大生命值增加25", "icon": "❤️", "rarity": "common"},
 		{"id": "lucky_clover", "name": "幸运四叶草", "description": "升级时获得4个选项而不是3个", "icon": "🍀", "rarity": "uncommon"},
-		{"id": "shadow_cloak", "name": "暗影披风", "description": "10%几率闪避敌人攻击", "icon": "👻", "rarity": "uncommon"}
+		{"id": "shadow_cloak", "name": "暗影披风", "description": "10%几率闪避敌人攻击", "icon": "👻", "rarity": "uncommon"},
+		{"id": "upgrade_enhancer", "name": "升级增强器", "description": "增加升级选项数量(+1)，增加重新随机次数(+1)，提高选项数值(+20%)", "icon": "🔮", "rarity": "rare"},
+		
+		# 新遗物
+		{"id": "time_warper", "name": "时间扭曲器", "description": "减缓敌人移动速度(25%)，增加玩家攻击速度(15%)", "icon": "⏱️", "rarity": "rare"},
+		{"id": "elemental_resonance", "name": "元素共鸣", "description": "每种不同类型的武器增加8%伤害(最大40%)", "icon": "🔄", "rarity": "epic"},
+		{"id": "experience_catalyst", "name": "经验催化剂", "description": "击杀敌人有25%几率掉落额外经验球", "icon": "✨", "rarity": "uncommon"},
+		{"id": "critical_amulet", "name": "暴击护符", "description": "增加15%暴击几率，暴击造成双倍伤害", "icon": "🔮", "rarity": "rare"},
+		{"id": "life_steal", "name": "生命窃取", "description": "造成伤害时恢复伤害值5%的生命值", "icon": "💉", "rarity": "uncommon"}
 	]
 
 	# 为每个遗物创建一个按钮
@@ -82,7 +90,7 @@ func generate_relic_grid():
 		button.toggle_mode = true
 
 		# 设置按钮文本
-		var text = relic_info.icon + " " + relic_info.name + "\\n" + relic_info.description
+		var text = relic_info.icon + " " + relic_info.name + "\n" + relic_info.description
 		button.text = text
 		button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -131,6 +139,18 @@ func update_selected_relics_display():
 				relic_info.icon = "🍀"
 			"shadow_cloak":
 				relic_info.icon = "👻"
+			"upgrade_enhancer":
+				relic_info.icon = "🔮"
+			"time_warper":
+				relic_info.icon = "⏱️"
+			"elemental_resonance":
+				relic_info.icon = "🔄"
+			"experience_catalyst":
+				relic_info.icon = "✨"
+			"critical_amulet":
+				relic_info.icon = "🔮"
+			"life_steal":
+				relic_info.icon = "💉"
 
 		equipped_relics_info.append(relic_info)
 
@@ -138,7 +158,7 @@ func update_selected_relics_display():
 		var relic_info = equipped_relics_info[i]
 		text += relic_info.icon + " " + relic_info.name
 		if i < equipped_relics_info.size() - 1:
-			text += "\\n"
+			text += "\n"
 
 	# 设置文本并强制更新
 	label.text = text

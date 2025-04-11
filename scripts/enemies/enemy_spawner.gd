@@ -22,6 +22,9 @@ var min_spawn_distance = 400  # Minimum distance from player
 var max_enemies = 100  # Maximum number of enemies at once
 var difficulty = 0  # Increases over time
 
+# 遗物效果修改器
+var enemy_speed_modifier = 0.0  # 敌人速度修改器，负值减速，正值加速
+
 # References
 var player = null
 
@@ -103,6 +106,13 @@ func spawn_enemy():
 
 	if "experience_value" in enemy:
 		enemy.experience_value = int(enemy.experience_value * (1 + difficulty * 0.02))
+
+	# 应用遗物效果修改器
+	if "move_speed" in enemy and enemy_speed_modifier != 0.0:
+		# 计算新的移动速度，确保不会变成负数
+		var speed_multiplier = 1.0 + enemy_speed_modifier
+		enemy.move_speed = max(10, enemy.move_speed * speed_multiplier)
+		print("应用敌人速度修改器，原速度:", enemy.move_speed / speed_multiplier, "新速度:", enemy.move_speed)
 
 	# 更新生命条
 	var health_bar = enemy.find_child("ProgressBar")

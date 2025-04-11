@@ -210,6 +210,9 @@ func start_game():
 	var wand = load("res://scenes/weapons/magic_wand.tscn").instantiate()
 	player.weapon_container.add_child(wand)
 
+	# 加载选择的遗物
+	load_selected_relics()
+
 	# 触发游戏开始事件，应用遗物效果
 	if relic_manager:
 		var event_data = {
@@ -219,6 +222,7 @@ func start_game():
 		}
 
 		# 触发游戏开始事件
+		print("触发游戏开始事件，枚举值:", AbstractRelic.EventType.GAME_START)
 		var modified_data = relic_manager.trigger_event(AbstractRelic.EventType.GAME_START, event_data)
 
 		# 处理修改后的数据
@@ -235,8 +239,23 @@ func start_game():
 			if stat_boosts.has("move_speed"):
 				player.move_speed += stat_boosts["move_speed"]
 
+		# 处理时间扭曲器遗物效果
+		if modified_data.has("enemy_speed_modifier"):
+			enemy_spawner.enemy_speed_modifier = modified_data["enemy_speed_modifier"]
+			print("应用敌人速度修改器:", enemy_spawner.enemy_speed_modifier)
+
+		if modified_data.has("player_attack_speed_modifier"):
+			var attack_speed_bonus = modified_data["player_attack_speed_modifier"]
+			# 将攻击速度加成应用到所有武器
+			for weapon in player.weapon_container.get_children():
+				if "attack_speed" in weapon:
+					weapon.attack_speed *= (1 + attack_speed_bonus)
+			print("应用玩家攻击速度修改器:", attack_speed_bonus)
+
 		# 处理自动升级
+		print("检查自动升级标志:", modified_data)
 		if modified_data.has("auto_level_up") and modified_data["auto_level_up"]:
+			print("智慧水晶触发自动升级")
 			# 在下一帧自动升级，避免在初始化过程中升级
 			await get_tree().process_frame
 			# 直接调用升级函数，不需要经验值
@@ -320,7 +339,7 @@ func add_experience(amount):
 		}
 
 		# 触发经验获取事件
-		var modified_data = relic_manager.trigger_event(2, event_data)  # 2 = EXPERIENCE_GAIN
+		var modified_data = relic_manager.trigger_event(AbstractRelic.EventType.EXPERIENCE_GAIN, event_data)
 
 		# 获取修改后的经验值
 		amount = modified_data["experience"]
@@ -794,10 +813,13 @@ func _on_player_died():
 		}
 
 		# 触发玩家死亡事件
-		var modified_data = relic_manager.trigger_event(4, event_data)  # 4 = PLAYER_DEATH
+		print("触发玩家死亡事件，枚举值:", AbstractRelic.EventType.PLAYER_DEATH)
+		var modified_data = relic_manager.trigger_event(AbstractRelic.EventType.PLAYER_DEATH, event_data)
+
+		print("玩家死亡事件返回数据:", modified_data)
 
 		# 检查是否防止死亡
-		if modified_data["prevent_death"]:
+		if modified_data.has("prevent_death") and modified_data["prevent_death"]:
 			# 恢复生命值
 			var heal_amount = player.max_health * modified_data["heal_percent"]
 			player.current_health = heal_amount
@@ -885,6 +907,27 @@ func load_selected_relics():
 func _on_enemy_died(position, experience):
 	# Debug output
 	# print("Main scene received enemy_died signal at position: ", position, " with experience: ", experience)
+
+	# 触发敌人死亡事件，应用遗物效果
+	if relic_manager:
+		var event_data = {
+			"position": position,
+			"experience_value": experience,
+			"player": player
+		}
+
+		# 触发敌人死亡事件
+		var modified_data = relic_manager.trigger_event(AbstractRelic.EventType.ENEMY_KILLED, event_data)
+
+		# 处理经验催化剂遗物效果
+		if modified_data.has("spawn_extra_orb") and modified_data["spawn_extra_orb"]:
+			var extra_value = 1
+			if modified_data.has("extra_orb_value"):
+				extra_value = modified_data["extra_orb_value"]
+
+			# 生成额外的经验球
+			var offset = Vector2(randf_range(-20, 20), randf_range(-20, 20))
+			spawn_experience_orb(position + offset, extra_value)
 
 	# Increment enemy defeat counter
 	enemies_defeated += 1

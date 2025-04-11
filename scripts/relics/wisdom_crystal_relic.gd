@@ -17,14 +17,16 @@ func get_event_types() -> Array:
 
 # 处理事件
 func on_event(event_type: int, event_data: Dictionary) -> Dictionary:
+    var modified_data = event_data.duplicate()
     if event_type == EventType.GAME_START and not applied:
-        # print("智慧水晶触发: 自动获得一级")
+        print("智慧水晶触发: 自动获得一级，事件类型:", event_type, "，枚举值:", EventType.GAME_START)
 
         # 标记为已应用
         applied = true
 
         # 修改事件数据，添加自动升级标志
-        event_data["auto_level_up"] = true
+        modified_data["auto_level_up"] = true
+        print("智慧水晶设置自动升级标志:", modified_data)
 
         # 显示效果
         if event_data.has("player"):
@@ -41,7 +43,7 @@ func on_event(event_type: int, event_data: Dictionary) -> Dictionary:
             tween.parallel().tween_property(effect_label, "modulate:a", 0, 0.5)
             tween.tween_callback(func(): effect_label.queue_free())
 
-    return event_data
+    return modified_data
 
 # 获取遗物的状态信息
 func get_state() -> Dictionary:

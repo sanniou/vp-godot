@@ -17,15 +17,17 @@ func get_event_types() -> Array:
 
 # 处理事件
 func on_event(event_type: int, event_data: Dictionary) -> Dictionary:
+    var modified_data = event_data.duplicate()
     if event_type == EventType.PLAYER_DEATH and not used:
-        # print("凤凰之羽触发: 玩家复活")
+        print("凤凰之羽触发: 玩家复活，事件类型:", event_type, "，枚举值:", EventType.PLAYER_DEATH)
 
         # 标记为已使用
         used = true
 
         # 修改事件数据，阻止死亡并恢复生命值
-        event_data["prevent_death"] = true
-        event_data["heal_percent"] = 0.5
+        modified_data["prevent_death"] = true
+        modified_data["heal_percent"] = 0.5
+        print("凤凰之羽设置阻止死亡标志:", modified_data)
 
         # 显示复活效果
         if event_data.has("player"):
@@ -42,7 +44,7 @@ func on_event(event_type: int, event_data: Dictionary) -> Dictionary:
             tween.parallel().tween_property(res_label, "modulate:a", 0, 0.5)
             tween.tween_callback(func(): res_label.queue_free())
 
-    return event_data
+    return modified_data
 
 # 获取遗物的状态信息
 func get_state() -> Dictionary:
