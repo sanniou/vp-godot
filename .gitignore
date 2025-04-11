@@ -16,6 +16,7 @@ mono_crash.*.json
 
 # Log files
 godot*.log
+*.log
 
 # Build directories
 build/
@@ -34,3 +35,20 @@ Thumbs.db
 *.save
 *.bak
 *.tmp
+
+# Import files
+*.import
+
+# Test files
+test/
+test_*.tscn
+test_*.gd
+*_test.tscn
+*_test.gd
+
+# UID files
+*.uid
+
+# Temporary development files
+**(副本).png
+**(副本).png.import
