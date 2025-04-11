@@ -27,6 +27,13 @@ var knife_scene = preload("res://scenes/weapons/knife.tscn")
 var shield_scene = preload("res://scenes/weapons/shield.tscn")
 var lightning_scene = preload("res://scenes/weapons/lightning.tscn")
 
+# New weapon scenes
+var orbital_satellite_scene = preload("res://scenes/weapons/orbital_satellite.tscn")
+var black_hole_bomb_scene = preload("res://scenes/weapons/black_hole_bomb.tscn")
+var toxic_spray_scene = preload("res://scenes/weapons/toxic_spray.tscn")
+var frost_staff_scene = preload("res://scenes/weapons/frost_staff.tscn")
+var boomerang_scene = preload("res://scenes/weapons/boomerang.tscn")
+
 # Achievement manager
 var achievement_manager = null
 
@@ -439,7 +446,10 @@ func show_level_up_screen():
 		max_rerolls = relic_manager.get_reroll_count()
 
 	# 检查玩家拥有的武器
-	var available_weapons = ["flamethrower", "gun", "knife", "shield", "lightning"]
+	var available_weapons = [
+		"flamethrower", "gun", "knife", "shield", "lightning",
+		"orbital_satellite", "black_hole_bomb", "toxic_spray", "frost_staff", "boomerang"
+	]
 	var has_weapons = {}
 
 	# 使用武器管理器获取已装备武器
@@ -502,6 +512,26 @@ func show_level_up_screen():
 					weapon_scene = lightning_scene
 					weapon_name = "Lightning"
 					weapon_description = "Strikes enemies with chain lightning"
+				"orbital_satellite":
+					weapon_scene = orbital_satellite_scene
+					weapon_name = "Orbital Satellite"
+					weapon_description = "Satellites orbit around you, damaging enemies they touch"
+				"black_hole_bomb":
+					weapon_scene = black_hole_bomb_scene
+					weapon_name = "Black Hole Bomb"
+					weapon_description = "Creates a black hole that pulls and damages enemies"
+				"toxic_spray":
+					weapon_scene = toxic_spray_scene
+					weapon_name = "Toxic Spray"
+					weapon_description = "Sprays poison that deals damage over time"
+				"frost_staff":
+					weapon_scene = frost_staff_scene
+					weapon_name = "Frost Staff"
+					weapon_description = "Slows enemies and deals damage with ice magic"
+				"boomerang":
+					weapon_scene = boomerang_scene
+					weapon_name = "Boomerang"
+					weapon_description = "Returns after being thrown, damaging enemies along its path"
 
 			# 添加到选项列表
 			if weapon_scene:

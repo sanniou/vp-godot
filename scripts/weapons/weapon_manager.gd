@@ -36,6 +36,13 @@ func register_available_weapons():
     var shield_scene = load("res://scenes/weapons/shield.tscn")
     var lightning_scene = load("res://scenes/weapons/lightning.tscn")
 
+    # 加载新武器场景
+    var orbital_satellite_scene = load("res://scenes/weapons/orbital_satellite.tscn")
+    var black_hole_bomb_scene = load("res://scenes/weapons/black_hole_bomb.tscn")
+    var toxic_spray_scene = load("res://scenes/weapons/toxic_spray.tscn")
+    var frost_staff_scene = load("res://scenes/weapons/frost_staff.tscn")
+    var boomerang_scene = load("res://scenes/weapons/boomerang.tscn")
+
     # 注册武器
     register_weapon("magic_wand", magic_wand_scene)
     register_weapon("flamethrower", flamethrower_scene)
@@ -43,6 +50,13 @@ func register_available_weapons():
     register_weapon("knife", knife_scene)
     register_weapon("shield", shield_scene)
     register_weapon("lightning", lightning_scene)
+
+    # 注册新武器
+    register_weapon("orbital_satellite", orbital_satellite_scene)
+    register_weapon("black_hole_bomb", black_hole_bomb_scene)
+    register_weapon("toxic_spray", toxic_spray_scene)
+    register_weapon("frost_staff", frost_staff_scene)
+    register_weapon("boomerang", boomerang_scene)
 
 # 注册一个武器
 func register_weapon(weapon_id: String, weapon_scene):

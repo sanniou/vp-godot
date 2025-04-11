@@ -38,7 +38,7 @@ func _process(delta):
 		call_deferred("queue_free")
 
 # 信号
-signal enemy_hit(enemy, damage)
+signal enemy_hit(weapon_id, enemy, damage)
 signal damage_dealt(enemy, damage, is_critical)
 
 func _on_body_entered(body):
@@ -61,7 +61,10 @@ func _on_body_entered(body):
 		body.take_damage(final_damage)
 
 		# 发出信号
-		enemy_hit.emit(body, final_damage)
+		var weapon_id = "magic_wand"
+		if get_parent() and "weapon_id" in get_parent():
+			weapon_id = get_parent().weapon_id
+		enemy_hit.emit(weapon_id, body, final_damage)
 		damage_dealt.emit(body, final_damage, damage_data["is_critical"])
 
 		# 处理生命窃取遗物效果

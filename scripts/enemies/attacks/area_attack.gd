@@ -61,7 +61,7 @@ func play_area_attack_animation():
     particles.amount = 50
     particles.lifetime = 0.5
     particles.explosiveness = 0.8
-    particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_CIRCLE
+    particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
     particles.emission_sphere_radius = range
     particles.direction = Vector2(0, -1)
     particles.spread = 180

@@ -144,18 +144,18 @@ func get_available_relics_info() -> Array:
 func trigger_event(event_type: int, event_data: Dictionary = {}) -> Dictionary:
     var modified_data = event_data.duplicate()
 
-    print("触发事件，类型:", event_type, "，已装备遗物:", equipped_relics.keys())
+    # print("触发事件，类型:", event_type, "，已装备遗物:", equipped_relics.keys())
 
     # 遍历所有已装备的遗物
     for relic_id in equipped_relics:
         var relic = equipped_relics[relic_id]
         var event_types = relic.get_event_types()
 
-        print("检查遗物:", relic_id, "，关心的事件类型:", event_types, "，当前事件:", event_type)
+        # print("检查遗物:", relic_id, "，关心的事件类型:", event_types, "，当前事件:", event_type)
 
         # 检查遗物是否关心此事件
         if event_type in event_types:
-            print("遗物", relic_id, "关心当前事件，触发效果")
+            # print("遗物", relic_id, "关心当前事件，触发效果")
             # 触发遗物效果
             modified_data = relic.on_event(event_type, modified_data)
 

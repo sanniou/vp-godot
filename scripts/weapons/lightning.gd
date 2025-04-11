@@ -58,11 +58,11 @@ func strike_lightning():
 	create_lightning_effect(global_position, primary_target.global_position)
 
 	# 发出信号
-	enemy_hit.emit(primary_target, damage_dealt)
+	enemy_hit.emit(weapon_id, primary_target, damage_dealt)
 
 	# 检查敌人是否死亡
 	if primary_target.current_health <= 0:
-		enemy_killed.emit(primary_target)
+		enemy_killed.emit(weapon_id, primary_target, primary_target.global_position)
 
 	# 处理闪电链
 	var hit_enemies = [primary_target]
@@ -77,11 +77,11 @@ func strike_lightning():
 			create_lightning_effect(current_target.global_position, next_target.global_position)
 
 			# 发出信号
-			enemy_hit.emit(next_target, chain_damage)
+			enemy_hit.emit(weapon_id, next_target, chain_damage)
 
 			# 检查敌人是否死亡
 			if next_target.current_health <= 0:
-				enemy_killed.emit(next_target)
+				enemy_killed.emit(weapon_id, next_target, next_target.global_position)
 
 			hit_enemies.append(next_target)
 			current_target = next_target
