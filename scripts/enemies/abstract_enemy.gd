@@ -58,6 +58,13 @@ var slow_timer: float = 0.0
 var is_burning: bool = false
 var burn_damage: float = 0.0
 var burn_timer: float = 0.0
+var is_knocked_back: bool = false
+var knockback_timer: float = 0.0
+
+# 碰撞后的临时状态
+var cannot_approach_player: bool = false  # 无法接近玩家
+var approach_cooldown_timer: float = 0.0  # 接近冷却计时器
+var last_collision_time: int = 0  # 上次碰撞时间
 
 # 攻击系统
 var attack_system = null
@@ -213,13 +220,49 @@ func _process(delta):
 
 # 物理更新
 func _physics_process(delta):
+    # 更新击退计时器
+    if is_knocked_back:
+        knockback_timer -= delta
+        if knockback_timer <= 0:
+            is_knocked_back = false
+            # 打印击退结束信息
+            print("Knockback ended for enemy: ", enemy_name)
+            # 重置速度
+            velocity = Vector2.ZERO
+
+            # 设置无法接近玩家状态，防止击退后立即吸附
+            cannot_approach_player = true
+            approach_cooldown_timer = 1.0  # 1秒无法接近玩家
+
+    # 更新接近冷却计时器
+    if cannot_approach_player:
+        approach_cooldown_timer -= delta
+        if approach_cooldown_timer <= 0:
+            cannot_approach_player = false
+            print("Enemy can approach player again: ", enemy_name)
+
+    # 如果正在被击退，保持当前速度并执行移动
+    if is_knocked_back:
+        # 打印当前速度
+        print("Knocked back enemy velocity: ", velocity)
+        # 仅执行移动，不改变速度
+        move_and_slide()
+        return
+
+    # 如果眼晕，不执行移动
     if is_stunned:
         return
 
-    # 移动逻辑
+    # 正常移动逻辑
     if target:
         # 计算方向
         var direction = (target.global_position - global_position).normalized()
+
+        # 如果处于无法接近玩家状态，则移动到玩家侧面或后面
+        if cannot_approach_player:
+            # 计算一个与玩家相对的侧面位置
+            var perpendicular = Vector2(direction.y, -direction.x)  # 垂直于原方向
+            direction = perpendicular  # 改变移动方向为垂直方向
 
         # 应用速度
         velocity = direction * move_speed * slow_factor
@@ -231,6 +274,9 @@ func _physics_process(delta):
 
     # 检查攻击范围
     check_attack_range()
+
+    # 主动检测与玩家的碰撞
+    check_player_collision()
 
 # 更新状态计时器
 func update_status_timers(delta):
@@ -436,15 +482,106 @@ func apply_status_effect(effect_type, duration, value = 0):
 
 # 应用击退
 func apply_knockback(direction, force):
+    # 记录碰撞时间
+    last_collision_time = Time.get_ticks_msec()
+
     # 应用击退抗性
     force *= (1 - knockback_resistance)
 
-    # 应用击退
-    velocity = direction * force
+    # 进一步减小击退力度，使敌人被击退约一个身位
+    force *= 0.1  # 进一步减小击退力度
 
-    # 创建一个短暂的计时器，在击退后恢复正常移动
-    var timer = get_tree().create_timer(0.2)
-    timer.timeout.connect(func(): velocity = Vector2.ZERO)
+    # 打印击退信息
+    print("Applying knockback to enemy: ", enemy_name, ", force: ", force)
+
+    # 设置击退状态
+    is_knocked_back = true
+    knockback_timer = 0.8  # 增加击退持续时间到 0.8 秒
+
+    # 立即设置无法接近玩家状态
+    cannot_approach_player = true
+    approach_cooldown_timer = 1.5  # 1.5秒无法接近玩家
+
+    # 应用击退速度 - 使用更大的值
+    velocity = direction * force * 2
+
+    # 直接修改敌人位置，实现立即击退效果
+    # 使用 move_and_collide 而不是直接设置位置，以处理碰撞
+    var collision = move_and_collide(direction * 5)  # 进一步减小初始位移
+
+    # 添加少量强制移动的定时器，在几帧内微小推动敌人
+    var timer1 = get_tree().create_timer(0.05)
+    timer1.timeout.connect(func(): if is_instance_valid(self) and is_knocked_back: move_and_collide(direction * 3))
+
+    var timer2 = get_tree().create_timer(0.1)
+    timer2.timeout.connect(func(): if is_instance_valid(self) and is_knocked_back: move_and_collide(direction * 2))
+
+    # 创建击退特效
+    create_knockback_effect(global_position)
+
+# 创建击退特效
+func create_knockback_effect(position):
+    # 创建粒子效果
+    var effect = CPUParticles2D.new()
+    effect.emitting = true
+    effect.one_shot = true
+    effect.explosiveness = 0.8
+    effect.amount = 10
+    effect.lifetime = 0.3
+    effect.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+    effect.emission_sphere_radius = 5
+    effect.direction = Vector2(0, 0)
+    effect.spread = 180
+    effect.gravity = Vector2(0, 0)
+    effect.initial_velocity_min = 30
+    effect.initial_velocity_max = 50
+    # 不设置 scale_amount，因为它可能不兼容
+    effect.color = Color(0.8, 0.8, 1.0, 0.7)  # 浅蓝色
+
+    # 添加到场景
+    get_tree().current_scene.add_child(effect)
+    effect.global_position = position
+
+    # 自动清理
+    var timer = Timer.new()
+    timer.wait_time = 0.5
+    timer.one_shot = true
+    timer.autostart = true
+    effect.add_child(timer)
+    timer.timeout.connect(func(): effect.queue_free())
+
+# 主动检测与玩家的碰撞
+func check_player_collision():
+    # 如果没有目标或正在被击退或无法接近玩家，不检测碰撞
+    if target == null or is_knocked_back or cannot_approach_player:
+        return
+
+    # 获取玩家
+    var player = get_tree().get_first_node_in_group("player")
+    if not player:
+        return
+
+    # 检查碰撞冷却时间
+    var current_time = Time.get_ticks_msec()
+    if current_time - last_collision_time < 1000:  # 1秒内不重复触发碰撞
+        return
+
+    # 计算与玩家的距离
+    var distance = global_position.distance_to(player.global_position)
+
+    # 使用更小的碰撞检测范围，提高精度
+    var collision_radius = 25  # 减小范围以提高精度
+
+    if distance < collision_radius:
+        # 更新碰撞时间
+        last_collision_time = current_time
+
+        # 打印碰撞信息
+        print("Enemy ", enemy_name, " actively detected collision with player, distance: ", distance)
+
+        # 触发玩家的碰撞处理
+        if player.has_method("_process_collision"):
+            player._process_collision(self)
 
 # 获取敌人信息
 func get_info():

@@ -76,8 +76,28 @@ var enemies_defeated = 0
 @onready var player_container = $GameWorld/Player
 @onready var enemies_container = $GameWorld/Enemies
 
+# 语言管理器引用
+var language_manager = null
+
 # Called when the node enters the scene tree for the first time
 func _ready():
+	# 获取语言管理器
+	language_manager = get_node_or_null("/root/LanguageManager")
+	if not language_manager:
+		# 如果找不到语言管理器，尝试从自动加载脚本获取
+		var autoload = get_node_or_null("/root/LanguageAutoload")
+		if autoload and autoload.language_manager:
+			language_manager = autoload.language_manager
+		else:
+			# 如果还是找不到，创建一个新的语言管理器
+			language_manager = load("res://scripts/language/language_manager.gd").new()
+			language_manager.name = "LanguageManager"
+			get_tree().root.call_deferred("add_child", language_manager)
+
+	# 连接语言变更信号
+	if language_manager:
+		language_manager.language_changed.connect(_on_language_changed)
+
 	# Initialize UI
 	experience_bar.max_value = experience_to_level
 	experience_bar.value = 0
@@ -89,6 +109,10 @@ func _ready():
 	$UI/PauseScreen/QuitButton.pressed.connect(_on_quit_button_pressed)
 	$UI/GameOverScreen/AchievementsButton.pressed.connect(_on_achievements_button_pressed)
 	$UI/AchievementsScreen/BackButton.pressed.connect(_on_achievements_back_button_pressed)
+	$UI/GameOverScreen/HomeButton.pressed.connect(_on_home_button_pressed)
+
+	# 更新UI文本
+	update_ui_text()
 
 	# Create enemy spawner
 	enemy_spawner = Node2D.new()
@@ -494,8 +518,12 @@ func show_level_up_screen():
 			match weapon_id:
 				"flamethrower":
 					weapon_scene = flamethrower_scene
-					weapon_name = "Flamethrower"
-					weapon_description = "A weapon that deals continuous damage in a cone"
+					if language_manager:
+						weapon_name = language_manager.get_translation("weapon_flamethrower_name", "Flamethrower")
+						weapon_description = language_manager.get_translation("weapon_flamethrower_desc", "A weapon that deals continuous damage in a cone")
+					else:
+						weapon_name = "Flamethrower"
+						weapon_description = "A weapon that deals continuous damage in a cone"
 				"gun":
 					weapon_scene = gun_scene
 					weapon_name = "Gun"
@@ -583,7 +611,10 @@ func show_level_up_screen():
 
 		# 创建重新随机按钮
 		var reroll_button = Button.new()
-		reroll_button.text = "Reroll (0/" + str(max_rerolls) + ")"
+		var reroll_text = "Reroll"
+		if language_manager:
+			reroll_text = language_manager.get_translation("reroll", "Reroll")
+		reroll_button.text = reroll_text + " (0/" + str(max_rerolls) + ")"
 		reroll_button.custom_minimum_size = Vector2(300, 30)
 		reroll_button.size_flags_horizontal = Control.SIZE_FILL
 
@@ -790,6 +821,9 @@ func _on_restart_button_pressed():
 	# Reset statistics
 	enemies_defeated = 0
 
+	# 直接使用上一局的遗物，无需重新选择
+	# 遗物已经通过 RelicGlobal 保存，并在 start_game() 中加载
+
 	# Start the game
 	start_game()
 
@@ -815,6 +849,33 @@ func _on_achievements_back_button_pressed():
 
 	# Show game over screen
 	game_over_screen.visible = true
+
+# Home button pressed
+func _on_home_button_pressed():
+	# Hide game over screen
+	game_over_screen.visible = false
+
+	# Reset game state
+	game_running = false
+	enemies_defeated = 0
+
+	# Clear existing enemies
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		enemy.queue_free()
+
+	# Clear existing experience orbs
+	for orb in get_tree().get_nodes_in_group("experience"):
+		orb.queue_free()
+
+	# Clear existing player
+	if player != null and is_instance_valid(player):
+		player.queue_free()
+
+	# Show start screen
+	show_start_screen()
+
+	# Resume the game (for the start screen)
+	get_tree().paused = false
 
 # Spawn an experience orb at the given position
 func spawn_experience_orb(position, value):
@@ -928,10 +989,121 @@ func load_selected_relics():
 		for relic_id in relic_global.selected_relics:
 			relic_manager.equip_relic(relic_id)
 
+		# 更新遗物显示
+		update_relics_display()
+
 		# Debug output
 		# print("Equipped relics: ", relic_manager.get_equipped_relics_info())
 
+# 更新遗物显示
+func update_relics_display():
+	# 获取遗物列表标签
+	var relics_list = $UI/GameUI/RelicsPanel/VBoxContainer/RelicsList
 
+	# 检查是否有遗物管理器
+	if not relic_manager:
+		return
+
+	# 获取已装备遗物信息
+	var equipped_relics = relic_manager.equipped_relics
+
+	# 如果没有遗物，显示“无”
+	if equipped_relics.size() == 0:
+		if language_manager:
+			relics_list.text = language_manager.get_translation("none", "无")
+		else:
+			relics_list.text = "无"
+		return
+
+	# 构建遗物显示文本
+	var text = ""
+	for relic_id in equipped_relics:
+		# 根据ID设置图标
+		var icon = "💫"  # 默认图标
+
+		match relic_id:
+			"phoenix_feather":
+				icon = "🔥"
+			"wisdom_crystal":
+				icon = "💎"
+			"magnetic_amulet":
+				icon = "🧲"
+			"heart_amulet":
+				icon = "❤️"
+			"lucky_clover":
+				icon = "🍀"
+			"shadow_cloak":
+				icon = "👻"
+			"upgrade_enhancer":
+				icon = "🔮"
+			"time_warper":
+				icon = "⏱️"
+			"elemental_resonance":
+				icon = "🔄"
+			"experience_catalyst":
+				icon = "✨"
+			"critical_amulet":
+				icon = "🔮"
+			"life_steal":
+				icon = "💉"
+
+		# 使用多语言系统获取遗物名称
+		var language_manager = get_node_or_null("/root/LanguageManager")
+		var display_name = relic_id
+
+		if language_manager:
+			# 使用语言管理器获取翻译
+			display_name = language_manager.get_translation("relic_" + relic_id + "_name", "")
+
+		# 如果没有翻译，使用格式化的名称
+		if display_name.is_empty():
+			display_name = relic_id.replace("_", " ")
+			if display_name.length() > 0:
+				display_name = display_name.substr(0, 1).to_upper() + display_name.substr(1)
+
+		text += icon + " " + display_name + "\n"
+
+	# 设置文本
+	relics_list.text = text
+
+# 更新UI文本
+func update_ui_text():
+	if not language_manager:
+		return
+
+	# 更新首页文本
+	$UI/StartScreen/TitleLabel.text = language_manager.get_translation("game_title", "Vampire Survivors Clone")
+	$UI/StartScreen/StartButton.text = language_manager.get_translation("start_game", "Start Game")
+	$UI/StartScreen/ControlsLabel.text = language_manager.get_translation("controls_info", "Controls:\nWASD or Arrow Keys to move\nSurvive as long as possible!\nCollect experience orbs to level up")
+
+	# 更新游戏结束界面文本
+	$UI/GameOverScreen/GameOverLabel.text = language_manager.get_translation("game_over", "Game Over")
+	$UI/GameOverScreen/RestartButton.text = language_manager.get_translation("retry", "Restart")
+	$UI/GameOverScreen/AchievementsButton.text = language_manager.get_translation("achievements", "Achievements")
+	$UI/GameOverScreen/HomeButton.text = language_manager.get_translation("main_menu", "Main Menu")
+
+	# 更新暂停界面文本
+	$UI/PauseScreen/PauseLabel.text = language_manager.get_translation("pause", "Pause")
+	$UI/PauseScreen/ResumeButton.text = language_manager.get_translation("resume", "Resume")
+	$UI/PauseScreen/QuitButton.text = language_manager.get_translation("quit", "Quit")
+
+	# 更新遗物面板标题
+	$UI/GameUI/RelicsPanel/VBoxContainer/TitleLabel.text = language_manager.get_translation("relics", "遗物")
+
+	# 更新升级界面文本
+	$UI/LevelUpScreen/LevelUpLabel.text = language_manager.get_translation("level_up", "Level Up!")
+
+	# 更新成就界面文本
+	$UI/AchievementsScreen/AchievementsLabel.text = language_manager.get_translation("achievements", "Achievements")
+	$UI/AchievementsScreen/ScrollContainer/AchievementsList.text = language_manager.get_translation("loading_achievements", "Loading achievements...")
+	$UI/AchievementsScreen/BackButton.text = language_manager.get_translation("back", "Back")
+
+	# 更新遗物显示
+	update_relics_display()
+
+# 处理语言变更
+func _on_language_changed(new_language):
+	update_ui_text()
 
 # Enemy signal handlers
 func _on_enemy_died(position, experience):

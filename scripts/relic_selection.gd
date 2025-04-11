@@ -73,7 +73,7 @@ func generate_relic_grid():
 		{"id": "lucky_clover", "name": "幸运四叶草", "description": "升级时获得4个选项而不是3个", "icon": "🍀", "rarity": "uncommon"},
 		{"id": "shadow_cloak", "name": "暗影披风", "description": "10%几率闪避敌人攻击", "icon": "👻", "rarity": "uncommon"},
 		{"id": "upgrade_enhancer", "name": "升级增强器", "description": "增加升级选项数量(+1)，增加重新随机次数(+1)，提高选项数值(+20%)", "icon": "🔮", "rarity": "rare"},
-		
+
 		# 新遗物
 		{"id": "time_warper", "name": "时间扭曲器", "description": "减缓敌人移动速度(25%)，增加玩家攻击速度(15%)", "icon": "⏱️", "rarity": "rare"},
 		{"id": "elemental_resonance", "name": "元素共鸣", "description": "每种不同类型的武器增加8%伤害(最大40%)", "icon": "🔄", "rarity": "epic"},
@@ -121,7 +121,7 @@ func update_selected_relics_display():
 		# 使用多语言系统获取遗物信息
 		var relic_info = {
 			"id": relic_id,
-			"name": language_manager.get_translation("relic_" + relic_id + "_name", relic_id.capitalize()),
+			"name": language_manager.get_translation("relic_" + relic_id + "_name", format_relic_name(relic_id)),
 			"icon": "🔮"
 		}
 
@@ -254,6 +254,17 @@ func update_ui_text():
 
 	# 更新遗物选择显示
 	update_selected_relics_display()
+
+# 格式化遗物名称（将下划线替换为空格并将首字母大写）
+func format_relic_name(relic_id: String) -> String:
+	# 将下划线替换为空格
+	var formatted_name = relic_id.replace("_", " ")
+
+	# 将首字母大写
+	if formatted_name.length() > 0:
+		formatted_name = formatted_name.substr(0, 1).to_upper() + formatted_name.substr(1)
+
+	return formatted_name
 
 # 处理语言变更
 func _on_language_changed(new_language):

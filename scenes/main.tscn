@@ -83,6 +83,30 @@ text = "00:00"
 horizontal_alignment = 2
 vertical_alignment = 1
 
+[node name="RelicsPanel" type="PanelContainer" parent="UI/GameUI"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -150.0
+offset_top = 50.0
+offset_right = -20.0
+offset_bottom = 150.0
+grow_horizontal = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/GameUI/RelicsPanel"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="UI/GameUI/RelicsPanel/VBoxContainer"]
+layout_mode = 2
+text = "遗物"
+horizontal_alignment = 1
+
+[node name="RelicsList" type="Label" parent="UI/GameUI/RelicsPanel/VBoxContainer"]
+layout_mode = 2
+text = "无"
+horizontal_alignment = 1
+
 [node name="StartScreen" type="Control" parent="UI"]
 process_mode = 3
 layout_mode = 3
@@ -230,6 +254,22 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_font_sizes/font_size = 24
 text = "Achievements"
+
+[node name="HomeButton" type="Button" parent="UI/GameOverScreen"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = 180.0
+offset_right = 100.0
+offset_bottom = 230.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 24
+text = "Main Menu"
 
 [node name="PauseScreen" type="Control" parent="UI"]
 process_mode = 2

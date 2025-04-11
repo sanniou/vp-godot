@@ -32,7 +32,7 @@
     "confirm": "确认",
     "max_relics": "最多选择 {0} 个遗物",
     "selected_relics": "已选择遗物",
-    
+
     "relic_phoenix_feather_name": "凤凰之羽",
     "relic_phoenix_feather_desc": "死亡时自动复活一次，恢复50%生命值",
     "relic_wisdom_crystal_name": "智慧水晶",
@@ -45,7 +45,19 @@
     "relic_lucky_clover_desc": "升级时获得4个选项而不是3个",
     "relic_shadow_cloak_name": "暗影披风",
     "relic_shadow_cloak_desc": "10%几率闪避敌人攻击",
-    
+    "relic_upgrade_enhancer_name": "升级增强器",
+    "relic_upgrade_enhancer_desc": "增加升级选项数量(+1)，增加重新随机次数(+1)，提高选项数值(+20%)",
+    "relic_time_warper_name": "时间扭曲器",
+    "relic_time_warper_desc": "减缓敌人移动速度(25%)，增加玩家攻击速度(15%)",
+    "relic_elemental_resonance_name": "元素共鸣",
+    "relic_elemental_resonance_desc": "每种不同类型的武器增加8%伤害(最大40%)",
+    "relic_experience_catalyst_name": "经验催化剂",
+    "relic_experience_catalyst_desc": "击杀敌人有25%几率掉落额外经验球",
+    "relic_critical_amulet_name": "暴击护符",
+    "relic_critical_amulet_desc": "增加15%暴击几率，暴击造成双倍伤害",
+    "relic_life_steal_name": "生命窃取",
+    "relic_life_steal_desc": "造成伤害时恢复伤害值5%的生命值",
+
     "weapon_magic_wand_name": "魔法棒",
     "weapon_magic_wand_desc": "发射魔法弹攻击敌人",
     "weapon_flamethrower_name": "火焰喷射器",
@@ -58,15 +70,23 @@
     "weapon_shield_desc": "保护自身并灼烧附近敌人",
     "weapon_lightning_name": "闪电法杖",
     "weapon_lightning_desc": "召唤闪电攻击敌人，可以链接多个目标",
-    
+
     "enemy_melee_name": "近战敌人",
     "enemy_ranged_name": "远程敌人",
     "enemy_elite_name": "精英敌人",
     "enemy_boss_name": "Boss敌人",
-    
+
     "effect_dodge": "闪避!",
     "effect_resurrect": "复活!",
     "effect_level_up": "获得一级!",
     "effect_heal": "治疗 +{0}",
-    "effect_bonus_exp": "+{0} 经验"
+    "effect_bonus_exp": "+{0} 经验",
+
+    "none": "无",
+    "relics": "遗物",
+    "achievements": "成就",
+    "controls_info": "控制方式:\nWASD 或方向键移动\n尽可能长时间生存!\n收集经验球升级",
+
+    "loading_achievements": "正在加载成就...",
+    "reroll": "重新随机"
 }
