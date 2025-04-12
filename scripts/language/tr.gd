@@ -16,7 +16,7 @@ static func get_language_manager():
     return language_manager
 
 # 获取翻译
-static func tr(key: String, default: String = "") -> String:
+static func get_tr(key: String, default: String = "") -> String:
     var language_manager = get_language_manager()
 
     if language_manager:
@@ -29,7 +29,7 @@ static func tr(key: String, default: String = "") -> String:
 
 # 格式化翻译文本
 static func trf(key: String, args: Array, default: String = "") -> String:
-    var text = tr(key, default)
+    var text = get_tr(key, default)
 
     # 替换占位符 {0}, {1}, {2}, ...
     for i in range(args.size()):
@@ -40,31 +40,31 @@ static func trf(key: String, args: Array, default: String = "") -> String:
 
 # 获取武器名称翻译
 static func weapon_name(weapon_id: String, default: String = "") -> String:
-    return tr("weapon_" + weapon_id + "_name", default if not default.is_empty() else weapon_id.replace("_", " ").capitalize())
+    return get_tr("weapon_" + weapon_id + "_name", default if not default.is_empty() else weapon_id.replace("_", " ").capitalize())
 
 # 获取武器描述翻译
 static func weapon_desc(weapon_id: String, default: String = "") -> String:
-    return tr("weapon_" + weapon_id + "_desc", default if not default.is_empty() else "A weapon that damages enemies")
+    return get_tr("weapon_" + weapon_id + "_desc", default if not default.is_empty() else "A weapon that damages enemies")
 
 # 获取遗物名称翻译
 static func relic_name(relic_id: String, default: String = "") -> String:
-    return tr("relic_" + relic_id + "_name", default if not default.is_empty() else relic_id.replace("_", " ").capitalize())
+    return get_tr("relic_" + relic_id + "_name", default if not default.is_empty() else relic_id.replace("_", " ").capitalize())
 
 # 获取遗物描述翻译
 static func relic_desc(relic_id: String, default: String = "") -> String:
-    return tr("relic_" + relic_id + "_desc", default if not default.is_empty() else "A mysterious relic with unknown powers")
+    return get_tr("relic_" + relic_id + "_desc", default if not default.is_empty() else "A mysterious relic with unknown powers")
 
 # 获取敌人名称翻译
 static func enemy_name(enemy_id: String, default: String = "") -> String:
-    return tr("enemy_" + enemy_id + "_name", default if not default.is_empty() else enemy_id.replace("_", " ").capitalize())
+    return get_tr("enemy_" + enemy_id + "_name", default if not default.is_empty() else enemy_id.replace("_", " ").capitalize())
 
 # 获取武器升级选项翻译
 static func weapon_upgrade(upgrade_type: String, default: String = "") -> String:
-    return tr("weapon_upgrade_" + upgrade_type, default)
+    return get_tr("weapon_upgrade_" + upgrade_type, default)
 
 # 获取武器升级描述翻译
 static func weapon_upgrade_desc(upgrade_type: String, default: String = "") -> String:
-    return tr("weapon_upgrade_" + upgrade_type + "_desc", default)
+    return get_tr("weapon_upgrade_" + upgrade_type + "_desc", default)
 
 # 获取当前语言
 static func get_current_language() -> String:

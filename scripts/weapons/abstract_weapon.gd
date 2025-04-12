@@ -67,10 +67,38 @@ func get_upgrade_options() -> Array:
     return []
 
 # 虚函数：应用升级
-func apply_upgrade(upgrade_type: int) -> void:
+func apply_upgrade(upgrade_type) -> void:
+    # 调试输出
+    print("Abstract weapon applying upgrade: ", upgrade_type, " for weapon: ", weapon_id)
+
     # 子类需要重写此方法，应用特定类型的升级
     level += 1
-    weapon_upgraded.emit(weapon_id, upgrade_type, level)
+
+    # 如果升级类型是整数，直接传递
+    if typeof(upgrade_type) == TYPE_INT:
+        weapon_upgraded.emit(weapon_id, upgrade_type, level)
+    # 如果升级类型是字符串，尝试将其转换为对应的枚举值
+    elif typeof(upgrade_type) == TYPE_STRING:
+        var enum_value = -1
+        match upgrade_type:
+            "damage": enum_value = UpgradeType.DAMAGE
+            "attack_speed": enum_value = UpgradeType.ATTACK_SPEED
+            "range": enum_value = UpgradeType.AREA
+            "projectile_count": enum_value = UpgradeType.PROJECTILE_COUNT
+            "projectile_speed": enum_value = UpgradeType.PROJECTILE_SPEED
+            "duration": enum_value = UpgradeType.EFFECT_DURATION
+            "cooldown": enum_value = UpgradeType.COOLDOWN
+            "special": enum_value = UpgradeType.SPECIAL
+
+        # 发出升级信号
+        if enum_value != -1:
+            weapon_upgraded.emit(weapon_id, enum_value, level)
+        else:
+            # 如果无法转换，使用原始字符串
+            weapon_upgraded.emit(weapon_id, upgrade_type, level)
+    else:
+        # 其他类型，直接传递
+        weapon_upgraded.emit(weapon_id, upgrade_type, level)
 
 # 虚函数：执行攻击
 func perform_attack() -> void:

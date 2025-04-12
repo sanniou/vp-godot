@@ -4,17 +4,20 @@ extends Node2D
 const AbstractRelic = preload("res://scripts/relics/abstract_relic.gd")
 const RelicManager = preload("res://scripts/relics/relic_manager.gd")
 const SimpleAchievementSystem = preload("res://scripts/simple_achievement_system.gd")
+const ExperienceManager = preload("res://scripts/experience/experience_manager.gd")
+const ExperienceOrbManager = preload("res://scripts/experience/experience_orb_manager.gd")
 
 # Game state variables
 var game_time = 0
 var game_running = true
-var player_level = 1
-var player_experience = 0
-var experience_to_level = 100
 var enemy_spawn_timer = 0
 var enemy_spawn_interval = 1.0  # Spawn enemies every second
 var difficulty_increase_timer = 0
 var difficulty_increase_interval = 60.0  # Increase difficulty every minute
+
+# 经验系统
+var experience_manager = null
+var experience_orb_manager = null
 
 # Scenes
 var player_scene = preload("res://scenes/player/player.tscn")
@@ -99,8 +102,27 @@ func _ready():
 	if language_manager:
 		language_manager.language_changed.connect(_on_language_changed)
 
+	# 初始化经验系统
+	experience_manager = ExperienceManager.new(self)
+	experience_manager.name = "ExperienceManager"
+	add_child(experience_manager)
+
+	experience_orb_manager = ExperienceOrbManager.new(self, experience_manager)
+	experience_orb_manager.name = "ExperienceOrbManager"
+	add_child(experience_orb_manager)
+
+	# 连接经验系统信号
+	experience_manager.level_up.connect(_on_experience_level_up)
+
+	# 初始化经验系统调试面板
+	var debug_panel = load("res://scenes/ui/experience_debug_panel.tscn").instantiate()
+	debug_panel.name = "ExperienceDebugPanel"
+	$UI.add_child(debug_panel)
+	debug_panel.set_experience_manager(experience_manager)
+	debug_panel.set_experience_orb_manager(experience_orb_manager)
+
 	# Initialize UI
-	experience_bar.max_value = experience_to_level
+	experience_bar.max_value = experience_manager.experience_to_level
 	experience_bar.value = 0
 
 	# Connect signals
@@ -150,6 +172,12 @@ func _ready():
 	relic_manager.name = "RelicManager"
 	add_child(relic_manager)
 
+	# Initialize effect manager
+	var effect_manager = Node.new()
+	effect_manager.set_script(load("res://scripts/utils/effect_manager.gd"))
+	effect_manager.name = "EffectManager"
+	add_child(effect_manager)
+
 	# Load selected relics from global
 	load_selected_relics()
 
@@ -196,13 +224,14 @@ func start_game():
 	# Reset game state
 	game_time = 0
 	game_running = true
-	player_level = 1
-	player_experience = 0
-	experience_to_level = 100
 	enemy_spawn_timer = 0
 	enemy_spawn_interval = 1.0
 	difficulty_increase_timer = 0
 	regeneration_timer = 0
+
+	# 重置经验系统
+	experience_manager.reset()
+	experience_orb_manager.clear_all_orbs()
 
 	# Reset achievement statistics
 	if achievement_manager:
@@ -210,9 +239,9 @@ func start_game():
 
 	# Reset UI
 	health_bar.value = 100
-	experience_bar.max_value = experience_to_level
+	experience_bar.max_value = experience_manager.experience_to_level
 	experience_bar.value = 0
-	level_label.text = "Level: %d" % player_level
+	level_label.text = "Level: %d" % experience_manager.current_level
 	game_over_screen.visible = false
 	level_up_screen.visible = false
 
@@ -298,10 +327,7 @@ func start_game():
 			# 在下一帧自动升级，避免在初始化过程中升级
 			await get_tree().process_frame
 			# 直接调用升级函数，不需要经验值
-			player_level += 1
-
-			# 计算新的升级所需经验值
-			experience_to_level = int(experience_to_level * 1.2)  # 增加下一级所需的经验值
+			experience_manager.set_level(experience_manager.current_level + 1)
 
 			# 显示升级效果
 			show_level_up_screen()
@@ -366,7 +392,7 @@ func increase_difficulty():
 			show_difficulty_message("Final wave!\nSurvive if you can!")
 
 # Add experience to the player
-func add_experience(amount):
+func add_experience(amount, source = "default"):
 	# 在发布版本中去掉调试日志
 	# print("Adding experience to player: ", amount, ", current experience: ", player_experience)
 
@@ -398,34 +424,34 @@ func add_experience(amount):
 			tween.parallel().tween_property(bonus_label, "modulate:a", 0, 0.5)
 			tween.tween_callback(func(): bonus_label.queue_free())
 
-	player_experience += amount
-	experience_bar.value = player_experience
+	# 使用经验管理器添加经验
+	var final_amount = experience_manager.add_experience(amount, source)
+
+	# 更新经验条
+	experience_bar.max_value = experience_manager.experience_to_level
+	experience_bar.value = experience_manager.current_experience
 
 	# Update achievement statistics
 	if achievement_manager:
-		achievement_manager.increment_statistic("experience_collected", amount)
+		achievement_manager.increment_statistic("experience_collected", final_amount)
 
-	# Debug output
-	# print("New experience: ", player_experience, ", experience bar value: ", experience_bar.value)
+	return final_amount
 
-	# Check for level up
-	if player_experience >= experience_to_level:
-		level_up()
+# 经验系统升级回调
+func _on_experience_level_up(new_level, overflow_exp):
+	# 更新等级标签
+	level_label.text = "Level: %d" % new_level
 
-# Level up the player
-func level_up():
-	player_level += 1
-	player_experience -= experience_to_level
-
-	# Calculate new experience to level
-	experience_to_level = int(experience_to_level * 1.2)  # Increase XP needed for next level
+	# 更新经验条
+	experience_bar.max_value = experience_manager.experience_to_level
+	experience_bar.value = experience_manager.current_experience
 
 	# 触发升级事件，应用遗物效果
 	if relic_manager:
 		var event_data = {
 			"player": player,
-			"level": player_level,
-			"experience_to_level": experience_to_level
+			"level": new_level,
+			"experience_to_level": experience_manager.experience_to_level
 		}
 
 		# 触发升级事件
@@ -433,24 +459,43 @@ func level_up():
 
 		# 获取修改后的数据
 		if modified_data.has("experience_to_level"):
-			experience_to_level = modified_data["experience_to_level"]
-
-	experience_bar.max_value = experience_to_level
-	experience_bar.value = player_experience
-
-	# Update level label
-	level_label.text = "Level: %d" % player_level
+			experience_manager.update_config({"base_exp_to_level": modified_data["experience_to_level"]})
+			experience_bar.max_value = experience_manager.experience_to_level
 
 	# Update achievement statistics
 	if achievement_manager:
-		achievement_manager.update_statistic("player_level", player_level)
+		achievement_manager.update_statistic("player_level", new_level)
 		achievement_manager.increment_statistic("levels_gained")
 
+	# 记录控制台状态
+	var console_panel = $UI/ConsolePanel
+	var console_was_visible = console_panel and console_panel.visible
+
 	# Show level up screen
-	show_level_up_screen()
+	show_level_up_screen(false)
+
+# Level up the player (for backward compatibility and console commands)
+func level_up(from_console = false):
+	# 使用经验管理器升级
+	if from_console:
+		# 如果是从控制台调用，直接添加足够的经验升级
+		var needed_exp = experience_manager.experience_to_level - experience_manager.current_experience
+		if needed_exp > 0:
+			experience_manager.add_experience(needed_exp, "console")
+		else:
+			# 如果已经有足够的经验，手动触发升级检查
+			experience_manager.check_level_up()
 
 # Show the level up screen with upgrade options
-func show_level_up_screen():
+func show_level_up_screen(from_console = false):
+	# 记录控制台状态
+	var console_panel = $UI/ConsolePanel
+	var console_was_visible = console_panel and console_panel.visible
+
+	# 如果控制台可见，隐藏它
+	if console_was_visible:
+		console_panel.visible = false
+
 	# Pause the game
 	get_tree().paused = true
 
@@ -656,10 +701,20 @@ func select_upgrade(upgrade_type, upgrade_amount = null, weapon_scene = null, ta
 		"weapon_damage":
 			# Increase damage for all weapons
 			if weapon_manager:
+				# 调试输出
+				print("Applying weapon_damage upgrade with amount: ", upgrade_amount)
+
 				for weapon_id in weapon_manager.equipped_weapons:
 					var weapon = weapon_manager.get_weapon(weapon_id)
-					if weapon and "damage" in weapon:
-						weapon.damage = int(weapon.damage * (1 + upgrade_amount))
+					if weapon:
+						# 调试输出
+						print("Upgrading weapon: ", weapon_id)
+
+						# 检查武器是否有 damage 属性
+						if "damage" in weapon:
+							var old_damage = weapon.damage
+							weapon.damage = int(weapon.damage * (1 + upgrade_amount))
+							print("  - ", weapon_id, " damage: ", old_damage, " -> ", weapon.damage)
 		"new_weapon":
 			# Add new weapon to player
 			if weapon_scene and weapon_manager:
@@ -673,14 +728,29 @@ func select_upgrade(upgrade_type, upgrade_amount = null, weapon_scene = null, ta
 			# Upgrade specific weapon
 			if target_weapon and weapon_manager:
 				# 获取武器ID
-				var weapon_id = target_weapon.name.to_lower()
+				var weapon_id = ""
+				if "weapon_id" in target_weapon:
+					weapon_id = target_weapon.weapon_id
+				else:
+					weapon_id = target_weapon.name.to_lower()
+
+				# 调试输出
+				print("Upgrading weapon: ", weapon_id, " with upgrade type: ", weapon_upgrade_type)
 
 				# 升级武器
 				weapon_manager.upgrade_weapon(weapon_id, weapon_upgrade_type)
 
-	# Hide level up screen and resume game
+	# Hide level up screen
 	level_up_screen.visible = false
-	get_tree().paused = false
+
+	# 检查是否需要恢复游戏
+	var console_panel = $UI/ConsolePanel
+	if console_panel and console_panel.visible:
+		# 如果控制台可见，保持暂停状态
+		get_tree().paused = true
+	else:
+		# 如果控制台不可见，恢复游戏
+		get_tree().paused = false
 
 # 重新随机升级选项
 func reroll_option(option_index, reroll_button):
@@ -692,7 +762,10 @@ func reroll_option(option_index, reroll_button):
 	option_rerolls[option_index] += 1
 
 	# 更新重新随机按钮文本
-	reroll_button.text = "Reroll (" + str(option_rerolls[option_index]) + "/" + str(max_rerolls) + ")"
+	var reroll_text = "Reroll"
+	if language_manager:
+		reroll_text = language_manager.get_translation("reroll", "Reroll")
+	reroll_button.text = reroll_text + " (" + str(option_rerolls[option_index]) + "/" + str(max_rerolls) + ")"
 
 	# 如果达到最大重新随机次数，禁用按钮
 	if option_rerolls[option_index] >= max_rerolls:
@@ -810,13 +883,19 @@ func game_over():
 		achievement_manager.save_achievements_to_file()
 
 	# Update game over stats
-	var stats_text = "Time Survived: %02d:%02d\n" % [int(game_time / 60), int(game_time) % 60]
-	stats_text += "Level Reached: %d\n" % player_level
-	stats_text += "Enemies Defeated: %d\n\n" % enemies_defeated
+	# 使用多语言系统获取翻译文本
+	var time_survived_text = language_manager.get_translation("time_survived", "Time Survived")
+	var level_reached_text = language_manager.get_translation("level_reached", "Level Reached")
+	var enemies_defeated_text = language_manager.get_translation("enemies_defeated", "Enemies Defeated")
+
+	var stats_text = time_survived_text + ": %02d:%02d\n" % [int(game_time / 60), int(game_time) % 60]
+	stats_text += level_reached_text + ": %d\n" % experience_manager.current_level
+	stats_text += enemies_defeated_text + ": %d\n\n" % enemies_defeated
 
 	# Add achievement statistics if available
 	if achievement_manager:
-		stats_text += "Achievements Unlocked: %d/%d\n" % [
+		var achievements_unlocked_text = language_manager.get_translation("achievements_unlocked", "Achievements Unlocked")
+		stats_text += achievements_unlocked_text + ": %d/%d\n" % [
 			achievement_manager.get_unlocked_achievements_count(),
 			achievement_manager.get_total_achievements_count()
 		]
@@ -829,10 +908,25 @@ func game_over():
 				unlocked_achievements.append(achievement)
 
 		if unlocked_achievements.size() > 0:
-			stats_text += "\nRecent Achievements:\n"
+			var recent_achievements_text = language_manager.get_translation("recent_achievements", "Recent Achievements")
+			stats_text += "\n" + recent_achievements_text + ":\n"
 			for i in range(min(3, unlocked_achievements.size())):
 				var achievement = unlocked_achievements[i]
-				stats_text += achievement.icon + " " + achievement.name + "\n"
+				# 获取成就的翻译名称
+				var achievement_name = achievement.name
+				if achievement.id and not achievement.id.is_empty():
+					# 打印调试信息
+					print("Looking for translation key: achievement_" + achievement.id + "_name")
+
+					# 尝试获取翻译
+					var translated_name = language_manager.get_translation("achievement_" + achievement.id + "_name", "")
+					if not translated_name.is_empty():
+						achievement_name = translated_name
+					else:
+						# 如果没有翻译，使用标题
+						if "title" in achievement:
+							achievement_name = achievement.title
+				stats_text += achievement.icon + " " + achievement_name + "\n"
 
 	$UI/GameOverScreen/StatsLabel.text = stats_text
 
@@ -933,17 +1027,9 @@ func _on_home_button_pressed():
 	get_tree().paused = false
 
 # Spawn an experience orb at the given position
-func spawn_experience_orb(position, value):
-	# Debug output
-	# print("Spawning experience orb at position: ", position, " with value: ", value)
-
-	var orb = experience_orb_scene.instantiate()
-	orb.global_position = position
-	orb.set_value(value)
-	game_world.add_child(orb)
-
-	# Debug output
-	# print("Experience orb added to scene")
+func spawn_experience_orb(position, value, source = "enemy"):
+	# 使用经验球管理器生成经验球
+	return experience_orb_manager.spawn_experience_orb(position, value, source)
 
 # Player signal handlers
 func _on_player_health_changed(new_health):

@@ -164,23 +164,60 @@ func _process(delta):
 
 # 升级武器
 func upgrade(upgrade_type):
-	match upgrade_type:
+	# 调试输出
+	print("Lightning upgrading: ", upgrade_type, " (type: ", typeof(upgrade_type), ")")
+
+	# 如果升级类型是整数，尝试将其转换为字符串
+	var type_str = upgrade_type
+	var type_int = -1
+
+	if typeof(upgrade_type) == TYPE_INT:
+		match upgrade_type:
+			0: # DAMAGE
+				type_str = "damage"
+				type_int = 0
+			1: # ATTACK_SPEED
+				type_str = "strike_rate"
+				type_int = 1
+			3: # PROJECTILE_COUNT
+				type_str = "chain_count"
+				type_int = 2
+			2: # AREA
+				type_str = "chain_range"
+				type_int = 3
+
+	# 处理升级
+	match type_str:
 		"damage":
+			var old_damage = damage
 			damage_level += 1
 			damage = 30 + (damage_level - 1) * 10  # 每级+10伤害
-			weapon_upgraded.emit(weapon_id, 0, damage_level)
-		"strike_rate":
+			print("Increased lightning damage from ", old_damage, " to ", damage)
+			type_int = 0
+		"strike_rate", "attack_speed":
+			var old_rate = strike_rate
 			strike_rate_level += 1
 			strike_rate = 0.8 + (strike_rate_level - 1) * 0.2  # 每级+0.2攻击速度
-			weapon_upgraded.emit(weapon_id, 1, strike_rate_level)
-		"chain_count":
+			print("Increased lightning strike rate from ", old_rate, " to ", strike_rate)
+			type_int = 1
+		"chain_count", "projectile_count":
+			var old_count = chain_count
 			chain_count_level += 1
 			chain_count = 2 + (chain_count_level - 1)  # 每级+1链数
-			weapon_upgraded.emit(weapon_id, 2, chain_count_level)
-		"chain_range":
+			print("Increased lightning chain count from ", old_count, " to ", chain_count)
+			type_int = 2
+		"chain_range", "range", "area":
+			var old_range = chain_range
 			chain_range_level += 1
 			chain_range = 150 + (chain_range_level - 1) * 30  # 每级+30范围
-			weapon_upgraded.emit(weapon_id, 3, chain_range_level)
+			print("Increased lightning chain range from ", old_range, " to ", chain_range)
+			type_int = 3
+		_:
+			print("Unknown upgrade type for lightning: ", upgrade_type)
+
+	# 发出升级信号
+	if type_int >= 0:
+		weapon_upgraded.emit(weapon_id, type_int, damage_level)
 
 # 获取武器升级选项
 func get_upgrade_options():

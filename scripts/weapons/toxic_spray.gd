@@ -118,7 +118,7 @@ func create_spray_effect(direction):
     particles.color = Color(0.2, 0.8, 0.2, 0.7)  # 绿色
     spray.add_child(particles)
 
-    # 添加脚本
+    # 使用效果管理器创建安全的脚本
     var script = GDScript.new()
     script.source_code = """
 extends Node2D
@@ -129,8 +129,11 @@ var max_lifetime = 0.8
 func _process(delta):
     lifetime += delta
 
-    # 淡出效果
-    $CPUParticles2D.modulate.a = 1.0 - (lifetime / max_lifetime)
+    # 安全地检查粒子是否存在
+    var particles = get_node_or_null("CPUParticles2D")
+    if particles:
+        # 淡出效果
+        particles.modulate.a = 1.0 - (lifetime / max_lifetime)
 
     if lifetime >= max_lifetime:
         queue_free()

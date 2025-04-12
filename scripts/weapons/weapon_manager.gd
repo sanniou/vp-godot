@@ -164,12 +164,26 @@ func _on_enemy_killed(weapon_id: String, enemy, position: Vector2):
     pass
 
 # 升级武器
-func upgrade_weapon(weapon_id: String, upgrade_type: int) -> bool:
+func upgrade_weapon(weapon_id: String, upgrade_type) -> bool:
     if not equipped_weapons.has(weapon_id):
+        print("Weapon not found: ", weapon_id)
         return false
 
     var weapon = equipped_weapons[weapon_id]
-    weapon.apply_upgrade(upgrade_type)
+
+    # 调试输出
+    print("Upgrading weapon: ", weapon_id, " with upgrade type: ", upgrade_type)
+    print("Weapon methods: ", weapon.get_method_list())
+
+    # 检查武器是否有 apply_upgrade 方法
+    if weapon.has_method("apply_upgrade"):
+        weapon.apply_upgrade(upgrade_type)
+    # 如果没有 apply_upgrade 方法，尝试使用 upgrade 方法
+    elif weapon.has_method("upgrade"):
+        weapon.upgrade(upgrade_type)
+    else:
+        print("Weapon does not have upgrade methods: ", weapon_id)
+        return false
 
     return true
 

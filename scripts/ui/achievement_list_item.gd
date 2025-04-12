@@ -31,8 +31,35 @@ func update_display():
 
 	# 显示成就信息
 	icon_label.text = achievement.icon
-	title_label.text = achievement.name
-	description_label.text = achievement.description
+
+	# 获取成就的翻译名称和描述
+	var achievement_name = achievement.name
+	var achievement_desc = achievement.description
+
+	if language_manager and achievement_id and not achievement_id.is_empty():
+		# 尝试获取翻译
+		var translated_name = language_manager.get_translation("achievement_" + achievement_id + "_name", "")
+		var translated_desc = language_manager.get_translation("achievement_" + achievement_id + "_desc", "")
+
+		# 打印调试信息
+		print("Achievement list item looking for translation: achievement_" + achievement_id + "_name")
+
+		if not translated_name.is_empty():
+			achievement_name = translated_name
+		else:
+			# 如果没有翻译，使用标题
+			if "title" in achievement:
+				achievement_name = achievement.title
+
+		if not translated_desc.is_empty():
+			achievement_desc = translated_desc
+		else:
+			# 如果没有翻译，使用原始描述
+			if "description" in achievement:
+				achievement_desc = achievement.description
+
+	title_label.text = achievement_name
+	description_label.text = achievement_desc
 
 	if achievement.unlocked:
 		# 已解锁：显示解锁时间，隐藏进度条
@@ -43,7 +70,13 @@ func update_display():
 		var unlock_time = achievement.unlock_time
 		var datetime = Time.get_datetime_dict_from_unix_time(unlock_time)
 		var formatted_time = "%04d-%02d-%02d %02d:%02d" % [datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute]
-		unlock_time_label.text = tr("unlocked_on") + ": " + formatted_time
+
+		# 获取翻译文本
+		var unlocked_on_text = "Unlocked on"
+		if language_manager:
+			unlocked_on_text = language_manager.get_translation("unlocked_on", "Unlocked on")
+
+		unlock_time_label.text = unlocked_on_text + ": " + formatted_time
 
 		# 设置已解锁样式
 		add_theme_stylebox_override("panel", get_theme_stylebox("panel_unlocked", "AchievementItem"))

@@ -193,17 +193,44 @@ func get_upgrade_options() -> Array:
     ]
 
 # 应用升级
-func apply_upgrade(upgrade_type: int) -> void:
-    match upgrade_type:
-        UpgradeType.DAMAGE:
-            damage += 10
-        UpgradeType.PROJECTILE_COUNT:
-            satellite_count += 1
-            create_satellites()
-        UpgradeType.AREA:
-            orbit_radius += 20
-        UpgradeType.ATTACK_SPEED:
-            orbit_speed *= 1.2
+func apply_upgrade(upgrade_type) -> void:
+    # 调试输出
+    print("Orbital satellite applying upgrade: ", upgrade_type)
+
+    # 如果升级类型是整数，使用枚举匹配
+    if typeof(upgrade_type) == TYPE_INT:
+        match upgrade_type:
+            UpgradeType.DAMAGE:
+                damage += 10
+                print("Increased damage to: ", damage)
+            UpgradeType.PROJECTILE_COUNT:
+                satellite_count += 1
+                print("Increased satellite count to: ", satellite_count)
+                # 重新创建卡卫星
+                call_deferred("create_satellites")
+            UpgradeType.AREA:
+                orbit_radius += 20
+                print("Increased orbit radius to: ", orbit_radius)
+            UpgradeType.ATTACK_SPEED:
+                orbit_speed *= 1.2
+                print("Increased orbit speed to: ", orbit_speed)
+    # 如果升级类型是字符串，使用字符串匹配
+    elif typeof(upgrade_type) == TYPE_STRING:
+        match upgrade_type:
+            "damage":
+                damage += 10
+                print("Increased damage to: ", damage)
+            "projectile_count":
+                satellite_count += 1
+                print("Increased satellite count to: ", satellite_count)
+                # 重新创建卡卫星
+                call_deferred("create_satellites")
+            "range":
+                orbit_radius += 20
+                print("Increased orbit radius to: ", orbit_radius)
+            "attack_speed":
+                orbit_speed *= 1.2
+                print("Increased orbit speed to: ", orbit_speed)
 
     # 调用父类方法
     super.apply_upgrade(upgrade_type)

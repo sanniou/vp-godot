@@ -36,6 +36,8 @@ func _ready():
 	register_command("teleport", func(args): return teleport_player(args), "传送玩家，用法: teleport [x] [y]")
 	register_command("set_time", func(args): return set_game_time(args), "设置游戏时间，用法: set_time [seconds]")
 	register_command("set_difficulty", func(args): return set_difficulty(args), "设置难度，用法: set_difficulty [level]")
+	register_command("exp_debug", func(args): return toggle_exp_debug(), "切换经验系统调试面板")
+	register_command("collect_orbs", func(args): return collect_all_orbs(), "收集所有经验球")
 
 # 注册命令
 func register_command(name, callback, description = ""):
@@ -193,11 +195,20 @@ func level_up(args):
 	if not main:
 		return "无法找到主场景"
 
+	# 隐藏控制台面板
+	var console_panel = main.get_node_or_null("UI/ConsolePanel")
+	if console_panel and console_panel.visible:
+		console_panel.visible = false
+
+	# 记录控制台状态，以便在升级后恢复
+	var console_was_visible = console_panel and console_panel.visible
+
 	for i in range(levels):
 		if main.has_method("level_up"):
-			main.level_up()
+			# 传递控制台状态信息
+			main.level_up(true)  # 传递参数表示这是从控制台调用的
 
-	return "已提升 " + str(levels) + " 级，当前等级: " + str(main.player_level)
+	return "已提升 " + str(levels) + " 级，当前等级: " + str(main.experience_manager.current_level)
 
 # 添加经验
 func add_experience(args):
@@ -316,3 +327,31 @@ func set_difficulty(args):
 		   "敌人生成间隔: " + str(enemy_spawn_interval) + "\n" + \
 		   "敌人生命值倍率: " + str(enemy_health_multiplier) + "\n" + \
 		   "敌人伤害倍率: " + str(enemy_damage_multiplier)
+
+# 切换经验系统调试面板
+func toggle_exp_debug():
+	var main = get_tree().get_root().get_node_or_null("Main")
+	if not main:
+		return "无法找到主场景"
+
+	var debug_panel = main.get_node_or_null("UI/ExperienceDebugPanel")
+	if not debug_panel:
+		return "无法找到经验系统调试面板"
+
+	# 切换可见性
+	debug_panel.toggle_visibility()
+
+	return "经验系统调试面板: " + ("显示" if debug_panel.visible else "隐藏")
+
+# 收集所有经验球
+func collect_all_orbs():
+	var main = get_tree().get_root().get_node_or_null("Main")
+	if not main:
+		return "无法找到主场景"
+
+	var orb_manager = main.get_node_or_null("ExperienceOrbManager")
+	if not orb_manager:
+		return "无法找到经验球管理器"
+
+	var count = orb_manager.collect_all_orbs()
+	return "已收集 " + str(count) + " 个经验球"

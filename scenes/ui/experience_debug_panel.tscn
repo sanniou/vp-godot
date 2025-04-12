@@ -1,0 +1,149 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8kqfxw5gvwqj"]
+
+[ext_resource type="Script" path="res://scripts/experience/experience_debug_panel.gd" id="1_yvj4r"]
+
+[node name="ExperienceDebugPanel" type="Control"]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_bottom = 400.0
+grow_horizontal = 0
+script = ExtResource("1_yvj4r")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TitleLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "经验系统调试"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="StatsContainer" type="VBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="LevelLabel" type="Label" parent="VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "等级: 1"
+
+[node name="ExpLabel" type="Label" parent="VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "经验: 0 / 100"
+
+[node name="ExpBar" type="ProgressBar" parent="VBoxContainer/StatsContainer"]
+layout_mode = 2
+max_value = 100.0
+step = 1.0
+
+[node name="MultiplierLabel" type="Label" parent="VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "经验乘数: x1.00"
+
+[node name="OrbsLabel" type="Label" parent="VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "活跃经验球: 0"
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="ButtonsContainer" type="GridContainer" parent="VBoxContainer"]
+layout_mode = 2
+columns = 2
+
+[node name="AddExpButton" type="Button" parent="VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "添加经验"
+
+[node name="ExpAmountEdit" type="LineEdit" parent="VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "10"
+placeholder_text = "数量"
+
+[node name="LevelUpButton" type="Button" parent="VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "升级"
+
+[node name="Spacer1" type="Control" parent="VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="AddMultiplierButton" type="Button" parent="VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "添加乘数"
+
+[node name="MultiplierEdit" type="LineEdit" parent="VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "1.5"
+placeholder_text = "乘数"
+
+[node name="DurationLabel" type="Label" parent="VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "持续时间:"
+
+[node name="DurationEdit" type="LineEdit" parent="VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "10"
+placeholder_text = "秒"
+
+[node name="SpawnOrbButton" type="Button" parent="VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "生成经验球"
+
+[node name="OrbValueEdit" type="LineEdit" parent="VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "5"
+placeholder_text = "价值"
+
+[node name="CollectAllButton" type="Button" parent="VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "收集所有"
+
+[node name="ResetButton" type="Button" parent="VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "重置"
+
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="SourcesContainer" type="VBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="SourcesLabel" type="Label" parent="VBoxContainer/SourcesContainer"]
+layout_mode = 2
+text = "经验来源:"
+
+[node name="SourcesList" type="VBoxContainer" parent="VBoxContainer/SourcesContainer"]
+layout_mode = 2

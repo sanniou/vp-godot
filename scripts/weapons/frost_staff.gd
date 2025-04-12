@@ -121,7 +121,9 @@ func create_frost_projectile():
     particles.gravity = Vector2(0, 0)
     particles.initial_velocity_min = 10
     particles.initial_velocity_max = 20
-    particles.scale_amount = 2
+    # 使用粒子辅助工具设置粒子缩放
+    var ParticleHelper = load("res://scripts/utils/particle_helper.gd")
+    ParticleHelper.set_particle_scale(particles, 2.0)
     particles.color = Color(0.8, 0.95, 1.0, 0.5)  # 淡蓝色
     projectile.add_child(particles)
 
@@ -247,7 +249,9 @@ func create_freeze_effect():
     effect.gravity = Vector2(0, 0)
     effect.initial_velocity_min = 30
     effect.initial_velocity_max = 50
-    effect.scale_amount = 3
+    # 使用粒子辅助工具设置粒子缩放
+    var ParticleHelper = load("res://scripts/utils/particle_helper.gd")
+    ParticleHelper.set_particle_scale(effect, 3.0)
     effect.color = Color(0.8, 0.95, 1.0, 0.7)  # 淡蓝色
     get_tree().current_scene.add_child(effect)
     effect.global_position = global_position

@@ -44,13 +44,24 @@ func initialize(achievement_manager_ref, language_manager_ref = null):
 # 更新UI文本
 func update_ui_text():
 	if language_manager:
-		title_label.text = tr("achievements")
-		back_button.text = tr("back")
+		# 使用 language_manager.get_translation 而不是 tr
+		title_label.text = language_manager.get_translation("achievements", "Achievements")
+		back_button.text = language_manager.get_translation("back", "Back")
 
 		filter_button.clear()
-		filter_button.add_item(tr("all_achievements"), FilterOption.ALL)
-		filter_button.add_item(tr("unlocked_achievements"), FilterOption.UNLOCKED)
-		filter_button.add_item(tr("locked_achievements"), FilterOption.LOCKED)
+		filter_button.add_item(language_manager.get_translation("all_achievements", "All Achievements"), FilterOption.ALL)
+		filter_button.add_item(language_manager.get_translation("unlocked_achievements", "Unlocked"), FilterOption.UNLOCKED)
+		filter_button.add_item(language_manager.get_translation("locked_achievements", "Locked"), FilterOption.LOCKED)
+		filter_button.selected = current_filter
+	else:
+		# 如果没有语言管理器，使用默认文本
+		title_label.text = "Achievements"
+		back_button.text = "Back"
+
+		filter_button.clear()
+		filter_button.add_item("All Achievements", FilterOption.ALL)
+		filter_button.add_item("Unlocked", FilterOption.UNLOCKED)
+		filter_button.add_item("Locked", FilterOption.LOCKED)
 		filter_button.selected = current_filter
 
 	# 更新进度标签
@@ -61,7 +72,8 @@ func update_ui_text():
 		percent = int((float(unlocked_count) / float(total_count)) * 100)
 
 	if language_manager:
-		progress_label.text = tr("progress_format_full").replace("%d1", str(unlocked_count)).replace("%d2", str(total_count)).replace("%d3", str(percent))
+		var progress_format = language_manager.get_translation("progress_format_full", "Progress: %d1/%d2 (%d3%%)")
+		progress_label.text = progress_format.replace("%d1", str(unlocked_count)).replace("%d2", str(total_count)).replace("%d3", str(percent))
 	else:
 		progress_label.text = "Progress: %d/%d (%d%%)" % [unlocked_count, total_count, percent]
 

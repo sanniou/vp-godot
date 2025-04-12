@@ -106,19 +106,23 @@ func apply_burn_damage():
 
 # 创建灼烧效果
 func create_burn_effect(position):
-	var effect = CPUParticles2D.new()
-	effect.emitting = true
-	effect.one_shot = true
-	effect.explosiveness = 0.8
-	effect.amount = 10
-	effect.lifetime = 0.5
-	effect.direction = Vector2(0, -1)
-	effect.spread = 180
-	effect.gravity = Vector2(0, 0)
-	effect.initial_velocity_min = 20
-	effect.initial_velocity_max = 40
-	effect.scale_amount = 2
-	effect.color = Color(1.0, 0.5, 0.0, 1.0)  # 橙色
+	# 使用效果管理器创建安全的粒子效果
+	var EffectManager = load("res://scripts/utils/effect_manager.gd")
+	var config = {
+		"emitting": true,
+		"one_shot": true,
+		"explosiveness": 0.8,
+		"amount": 10,
+		"lifetime": 0.5,
+		"direction": Vector2(0, -1),
+		"spread": 180.0,
+		"gravity": Vector2(0, 0),
+		"velocity_min": 20.0,
+		"velocity_max": 40.0,
+		"scale": 2.0,
+		"color": Color(1.0, 0.5, 0.0, 1.0)  # 橙色
+	}
+	var effect = EffectManager.create_safe_particles(position, config)
 
 	effect.global_position = position
 	get_tree().current_scene.add_child(effect)

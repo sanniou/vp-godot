@@ -1,5 +1,13 @@
 extends Node2D
 
+# 信号
+signal weapon_upgraded(weapon_id, upgrade_type, new_level)
+signal enemy_hit(weapon_id, enemy, damage)
+signal enemy_killed(weapon_id, enemy, position)
+
+# 武器标识
+var weapon_id = "knife"
+
 # 基本属性
 var damage = 25
 var attack_rate = 1.0  # 每秒攻击次数
@@ -152,16 +160,47 @@ func get_upgrade_options() -> Array:
 
 # 升级武器
 func upgrade(upgrade_type):
-	match upgrade_type:
+	# 调试输出
+	print("Knife upgrading: ", upgrade_type, " (type: ", typeof(upgrade_type), ")")
+
+	# 如果升级类型是整数，尝试将其转换为字符串
+	var type_str = upgrade_type
+	if typeof(upgrade_type) == TYPE_INT:
+		match upgrade_type:
+			0: # DAMAGE
+				type_str = "damage"
+			1: # ATTACK_SPEED
+				type_str = "attack_rate"
+			2: # AREA
+				type_str = "range"
+			7: # SPECIAL
+				type_str = "angle"
+
+	# 处理升级
+	match type_str:
 		"damage":
+			var old_damage = damage
 			damage_level += 1
 			damage = 25 + (damage_level - 1) * 10  # 每级+10伤害
-		"attack_rate":
+			print("Increased knife damage from ", old_damage, " to ", damage)
+		"attack_rate", "attack_speed":
+			var old_rate = attack_rate
 			attack_rate_level += 1
 			attack_rate = 1.0 + (attack_rate_level - 1) * 0.3  # 每级+0.3攻击速度
-		"range":
+			print("Increased knife attack rate from ", old_rate, " to ", attack_rate)
+		"range", "area":
+			var old_range = attack_range
 			range_level += 1
 			attack_range = 100 + (range_level - 1) * 20  # 每级+20范围
-		"angle":
+			print("Increased knife attack range from ", old_range, " to ", attack_range)
+		"angle", "special":
+			var old_angle = attack_angle
 			angle_level += 1
 			attack_angle = PI / 4 + (angle_level - 1) * (PI / 8)  # 每级+22.5度角度
+			print("Increased knife attack angle from ", old_angle, " to ", attack_angle)
+		_:
+			print("Unknown upgrade type for knife: ", upgrade_type)
+
+	# 发出升级信号（如果有）
+	if has_signal("weapon_upgraded"):
+		emit_signal("weapon_upgraded", "knife", type_str, damage_level)

@@ -21,7 +21,8 @@ enum EventType {
     TIMER_TICK,      # 定时触发
     UPGRADE_OPTIONS, # 升级选项生成时
     REROLL_COUNT,    # 获取重新随机次数时
-    OPTION_REROLL    # 重新随机选项时
+    OPTION_REROLL,   # 重新随机选项时
+    EXPERIENCE_ORB_COLLECTED # 收集经验球时
 }
 
 # 构造函数

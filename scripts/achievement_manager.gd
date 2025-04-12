@@ -86,12 +86,12 @@ var statistics = {
 func check_achievements():
 	for achievement_id in achievements:
 		var achievement = achievements[achievement_id]
-		
+
 		if achievement.unlocked:
 			continue
-		
+
 		var stat_value = statistics[achievement.type]
-		
+
 		if stat_value >= achievement.requirement:
 			unlock_achievement(achievement_id)
 
@@ -104,31 +104,31 @@ func unlock_achievement(achievement_id):
 # Show achievement notification
 func show_achievement_notification(achievement_id):
 	var achievement = achievements[achievement_id]
-	
+
 	# Create notification container
 	var container = PanelContainer.new()
 	container.size = Vector2(300, 80)
 	container.position = Vector2(get_viewport().size.x - 320, 20)
-	
+
 	# Create VBox for content
 	var vbox = VBoxContainer.new()
 	container.add_child(vbox)
-	
+
 	# Create title with icon
 	var title = Label.new()
 	title.text = achievement.icon + " Achievement Unlocked: " + achievement.title
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
-	
+
 	# Create description
 	var description = Label.new()
 	description.text = achievement.description
 	description.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(description)
-	
+
 	# Add to UI
 	get_tree().current_scene.add_child(container)
-	
+
 	# Animate and remove
 	container.modulate.a = 0
 	var tween = create_tween()
@@ -156,7 +156,7 @@ func reset_game_statistics():
 	statistics.games_played += 1
 	statistics.highest_level = max(statistics.highest_level, statistics.player_level)
 	statistics.longest_survival_time = max(statistics.longest_survival_time, statistics.time_survived)
-	
+
 	# Reset game-specific stats
 	statistics.enemies_defeated = 0
 	statistics.player_level = 1
@@ -168,22 +168,62 @@ func reset_game_statistics():
 
 # Get formatted statistics text
 func get_statistics_text():
-	var text = "STATISTICS\\n\\n"
-	text += "Games Played: %d\\n" % statistics.games_played
-	text += "Highest Level: %d\\n" % statistics.highest_level
-	text += "Longest Survival: %02d:%02d\\n" % [int(statistics.longest_survival_time / 60), int(statistics.longest_survival_time) % 60]
-	text += "Total Enemies Defeated: %d\\n" % statistics.enemies_defeated
-	
+	# 获取语言管理器
+	var language_manager = Engine.get_main_loop().root.get_node_or_null("LanguageManager")
+	if not language_manager:
+		# 如果找不到语言管理器，尝试从自动加载脚本获取
+		var autoload = Engine.get_main_loop().root.get_node_or_null("LanguageAutoload")
+		if autoload and autoload.language_manager:
+			language_manager = autoload.language_manager
+
+	# 获取翻译文本
+	var statistics_text = language_manager.get_translation("statistics", "STATISTICS") if language_manager else "STATISTICS"
+	var games_played_text = language_manager.get_translation("games_played", "Games Played") if language_manager else "Games Played"
+	var highest_level_text = language_manager.get_translation("highest_level", "Highest Level") if language_manager else "Highest Level"
+	var longest_survival_text = language_manager.get_translation("longest_survival", "Longest Survival") if language_manager else "Longest Survival"
+	var total_enemies_defeated_text = language_manager.get_translation("total_enemies_defeated", "Total Enemies Defeated") if language_manager else "Total Enemies Defeated"
+
+	var text = statistics_text + "\\n\\n"
+	text += games_played_text + ": %d\\n" % statistics.games_played
+	text += highest_level_text + ": %d\\n" % statistics.highest_level
+	text += longest_survival_text + ": %02d:%02d\\n" % [int(statistics.longest_survival_time / 60), int(statistics.longest_survival_time) % 60]
+	text += total_enemies_defeated_text + ": %d\\n" % statistics.enemies_defeated
+
 	return text
 
 # Get formatted achievements text
 func get_achievements_text():
-	var text = "ACHIEVEMENTS\\n\\n"
-	
+	# 获取语言管理器
+	var language_manager = Engine.get_main_loop().root.get_node_or_null("LanguageManager")
+	if not language_manager:
+		# 如果找不到语言管理器，尝试从自动加载脚本获取
+		var autoload = Engine.get_main_loop().root.get_node_or_null("LanguageAutoload")
+		if autoload and autoload.language_manager:
+			language_manager = autoload.language_manager
+
+	# 获取翻译文本
+	var achievements_text = language_manager.get_translation("achievements", "ACHIEVEMENTS") if language_manager else "ACHIEVEMENTS"
+
+	var text = achievements_text + "\\n\\n"
+
 	for achievement_id in achievements:
 		var achievement = achievements[achievement_id]
 		var status = "✅ " if achievement.unlocked else "❌ "
-		text += status + achievement.icon + " " + achievement.title + "\\n"
-		text += "    " + achievement.description + "\\n"
-	
+
+		# 获取成就的翻译名称和描述
+		var achievement_title = achievement.title
+		var achievement_desc = achievement.description
+
+		if achievement_id and not achievement_id.is_empty() and language_manager:
+			var translated_title = language_manager.get_translation("achievement_" + achievement_id + "_name", "")
+			var translated_desc = language_manager.get_translation("achievement_" + achievement_id + "_desc", "")
+
+			if not translated_title.is_empty():
+				achievement_title = translated_title
+			if not translated_desc.is_empty():
+				achievement_desc = translated_desc
+
+		text += status + achievement.icon + " " + achievement_title + "\\n"
+		text += "    " + achievement_desc + "\\n"
+
 	return text

@@ -444,22 +444,24 @@ func die():
 # 播放死亡动画
 func play_death_animation():
     # 子类可以重写此方法播放特定的死亡动画
-    var death_effect = CPUParticles2D.new()
-    death_effect.emitting = true
-    death_effect.one_shot = true
-    death_effect.explosiveness = 0.8
-    death_effect.amount = 20
-    death_effect.lifetime = 0.5
-    death_effect.direction = Vector2(0, -1)
-    death_effect.spread = 180
-    death_effect.gravity = Vector2(0, 0)
-    death_effect.initial_velocity_min = 50
-    death_effect.initial_velocity_max = 100
-    # 不设置 scale_amount，因为它可能不兼容
-    death_effect.color = Color(1.0, 0.3, 0.3, 1.0)  # 红色
+    # 使用效果管理器创建安全的粒子效果
+    var EffectManager = load("res://scripts/utils/effect_manager.gd")
+    var config = {
+        "emitting": true,
+        "one_shot": true,
+        "explosiveness": 0.8,
+        "amount": 20,
+        "lifetime": 0.5,
+        "direction": Vector2(0, -1),
+        "spread": 180.0,
+        "gravity": Vector2(0, 0),
+        "velocity_min": 50.0,
+        "velocity_max": 100.0,
+        "scale": 3.0,
+        "color": Color(1.0, 0.3, 0.3, 1.0)  # 红色
+    }
 
-    get_tree().current_scene.add_child(death_effect)
-    death_effect.global_position = global_position
+    EffectManager.create_safe_particles(global_position, config)
 
 # 获取攻击伤害值
 func get_attack_damage() -> float:

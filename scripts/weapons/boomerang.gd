@@ -278,21 +278,70 @@ func get_upgrade_options() -> Array:
     ]
 
 # 应用升级
-func apply_upgrade(upgrade_type: int) -> void:
-    match upgrade_type:
-        UpgradeType.DAMAGE:
-            damage += 8
-        UpgradeType.PROJECTILE_COUNT:
-            boomerang_count += 1
-        UpgradeType.SPECIAL:
-            hit_count += 1
-        UpgradeType.AREA:
-            max_distance += 50
-        UpgradeType.PROJECTILE_SPEED:
-            throw_speed += 50
-            return_speed += 50
-        UpgradeType.ATTACK_SPEED:
-            attack_rate *= 1.2
+func apply_upgrade(upgrade_type) -> void:
+    # 调试输出
+    print("Boomerang applying upgrade: ", upgrade_type, " (type: ", typeof(upgrade_type), ")")
+
+    # 如果升级类型是整数，使用枚举匹配
+    if typeof(upgrade_type) == TYPE_INT:
+        match upgrade_type:
+            UpgradeType.DAMAGE:
+                var old_damage = damage
+                damage += 8
+                print("Increased damage from ", old_damage, " to ", damage)
+            UpgradeType.PROJECTILE_COUNT:
+                var old_count = boomerang_count
+                boomerang_count += 1
+                print("Increased boomerang count from ", old_count, " to ", boomerang_count)
+            UpgradeType.SPECIAL:
+                var old_hit_count = hit_count
+                hit_count += 1
+                print("Increased hit count from ", old_hit_count, " to ", hit_count)
+            UpgradeType.AREA:
+                var old_distance = max_distance
+                max_distance += 50
+                print("Increased max distance from ", old_distance, " to ", max_distance)
+            UpgradeType.PROJECTILE_SPEED:
+                var old_throw_speed = throw_speed
+                var old_return_speed = return_speed
+                throw_speed += 50
+                return_speed += 50
+                print("Increased throw speed from ", old_throw_speed, " to ", throw_speed)
+                print("Increased return speed from ", old_return_speed, " to ", return_speed)
+            UpgradeType.ATTACK_SPEED:
+                var old_rate = attack_rate
+                attack_rate *= 1.2
+                print("Increased attack rate from ", old_rate, " to ", attack_rate)
+    # 如果升级类型是字符串，使用字符串匹配
+    elif typeof(upgrade_type) == TYPE_STRING:
+        match upgrade_type:
+            "damage":
+                var old_damage = damage
+                damage += 8
+                print("Increased damage from ", old_damage, " to ", damage)
+            "projectile_count":
+                var old_count = boomerang_count
+                boomerang_count += 1
+                print("Increased boomerang count from ", old_count, " to ", boomerang_count)
+            "special", "hit_count":
+                var old_hit_count = hit_count
+                hit_count += 1
+                print("Increased hit count from ", old_hit_count, " to ", hit_count)
+            "range", "area":
+                var old_distance = max_distance
+                max_distance += 50
+                print("Increased max distance from ", old_distance, " to ", max_distance)
+            "projectile_speed":
+                var old_throw_speed = throw_speed
+                var old_return_speed = return_speed
+                throw_speed += 50
+                return_speed += 50
+                print("Increased throw speed from ", old_throw_speed, " to ", throw_speed)
+                print("Increased return speed from ", old_return_speed, " to ", return_speed)
+            "attack_speed", "attack_rate":
+                var old_rate = attack_rate
+                attack_rate *= 1.2
+                print("Increased attack rate from ", old_rate, " to ", attack_rate)
 
     # 调用父类方法
     super.apply_upgrade(upgrade_type)

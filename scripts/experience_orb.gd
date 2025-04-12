@@ -1,5 +1,8 @@
 extends Area2D
 
+# 信号
+signal collected(value, source, orb)
+
 # 预加载抽象遗物类
 const AbstractRelic = preload("res://scripts/relics/abstract_relic.gd")
 
@@ -9,6 +12,7 @@ var max_speed = 400
 var acceleration = 800
 var target = null
 var is_attracting = false
+var source = "default"  # 经验来源
 
 func _ready():
 	# Connect signals
@@ -26,8 +30,8 @@ func _enable_collision():
 
 # 安全地启用碰撞检测
 func _safely_enable_collision():
-	monitoring = true
-	monitorable = true
+	set_deferred("monitoring", true)
+	set_deferred("monitorable", true)
 
 func _process(delta):
 	if is_attracting and target != null and is_instance_valid(target):
@@ -84,12 +88,35 @@ func _on_body_entered(body):
 		# Debug output
 		# print("Adding experience: ", experience_value)
 
-		# Add experience to player
+		# 触发遗物效果
 		var main = get_tree().current_scene
-		main.add_experience(experience_value)
+		if main and main.has_node("RelicManager"):
+			var relic_manager = main.get_node("RelicManager")
 
-		# 使用 call_deferred 延迟销毁经验球，避免在物理查询刷新时销毁
-		call_deferred("queue_free")
+			# 准备事件数据
+			var event_data = {
+				"experience": experience_value,
+				"player": body
+			}
+
+			# 触发经验球收集事件
+			var modified_data = relic_manager.trigger_event(AbstractRelic.EventType.EXPERIENCE_ORB_COLLECTED, event_data)
+
+			# 获取修改后的经验值
+			experience_value = modified_data["experience"]
+
+		# 禁用碰撞检测，防止多次触发
+		set_deferred("monitoring", false)
+		set_deferred("monitorable", false)
+
+		# 发出收集信号
+		collected.emit(experience_value, source, self)
+
+		# 播放收集动画
+		var tween = create_tween()
+		tween.tween_property(self, "scale", Vector2.ZERO, 0.2)
+		tween.parallel().tween_property(self, "modulate", Color(1, 1, 1, 0), 0.2)
+		tween.tween_callback(func(): queue_free())
 
 func _on_attract_timer_timeout():
 	# Find player

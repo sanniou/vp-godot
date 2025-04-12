@@ -47,15 +47,20 @@ func cast_black_hole():
 
     # 创建黑洞
     var black_hole = create_black_hole()
-    black_hole.position = target_position
-    black_hole.lifetime = 0.0
-    black_hole.max_lifetime = duration
+    if black_hole:
+        black_hole.position = target_position
+        black_hole.set_meta("lifetime", 0.0)
+        black_hole.set_meta("max_lifetime", duration)
 
     # 添加到场景
-    get_tree().current_scene.add_child(black_hole)
+    if black_hole and is_instance_valid(black_hole):
+        get_tree().current_scene.add_child(black_hole)
 
-    # 记录活跃的黑洞
-    active_black_holes.append(black_hole)
+        # 记录活跃的黑洞
+        active_black_holes.append(black_hole)
+
+        # 调试输出
+        print("Black hole created at position: ", black_hole.position)
 
     # 触发攻击事件
     var attack_data = {
@@ -108,6 +113,11 @@ func find_best_position():
 # 创建黑洞
 func create_black_hole():
     var black_hole = Node2D.new()
+
+    # 预先设置属性，避免脚本加载后覆盖
+    black_hole.set_meta("damage_per_second", damage_per_second)
+    black_hole.set_meta("explosion_damage", explosion_damage)
+    black_hole.set_meta("pull_force", pull_force)
 
     # 添加视觉效果
     var visual = Polygon2D.new()
@@ -170,11 +180,11 @@ func create_black_hole():
     script.source_code = """
 extends Node2D
 
-var lifetime = 0.0
-var max_lifetime = 3.0
-var damage_per_second = 15
-var explosion_damage = 50
-var pull_force = 150
+var lifetime = get_meta("lifetime") if has_meta("lifetime") else 0.0
+var max_lifetime = get_meta("max_lifetime") if has_meta("max_lifetime") else 3.0
+var damage_per_second = get_meta("damage_per_second") if has_meta("damage_per_second") else 15
+var explosion_damage = get_meta("explosion_damage") if has_meta("explosion_damage") else 50
+var pull_force = get_meta("pull_force") if has_meta("pull_force") else 150
 var affected_enemies = {}  # 记录已经受到伤害的敌人和时间
 
 func _process(delta):
@@ -185,16 +195,21 @@ func _process(delta):
     var scale_factor = 1.0 - t * 0.3  # 逐渐缩小
     scale = Vector2(scale_factor, scale_factor)
 
-    # 脉动效果
-    var pulse = sin(lifetime * 10) * 0.1 + 0.9
-    $Polygon2D.scale = Vector2(pulse, pulse)
+    # 安全地检查多边形是否存在
+    var polygon = get_node_or_null("Polygon2D")
+    if polygon:
+        # 脉动效果
+        var pulse = sin(lifetime * 10) * 0.1 + 0.9
+        polygon.scale = Vector2(pulse, pulse)
 
     # 旋转效果
     rotation += delta * 0.5
 
-    # 处理拉力和伤害
-    var area = $Area2D
-    var overlapping_bodies = area.get_overlapping_bodies()
+    # 安全地检查区域是否存在
+    var area = get_node_or_null("Area2D")
+    var overlapping_bodies = []
+    if area:
+        overlapping_bodies = area.get_overlapping_bodies()
 
     for body in overlapping_bodies:
         if body.is_in_group("enemies"):
@@ -268,13 +283,15 @@ func explode():
     explosion.add_child(timer)
     timer.timeout.connect(func(): explosion.queue_free())
 """
-    script.reload()
-    black_hole.set_script(script)
+    var error = script.reload()
+    if error == OK:
+        black_hole.set_script(script)
+        print("Black hole script loaded successfully")
+    else:
+        push_error("Failed to load black hole script: " + str(error))
+        return null  # 返回空值表示创建失败
 
-    # 设置黑洞属性
-    black_hole.damage_per_second = damage_per_second
-    black_hole.explosion_damage = explosion_damage
-    black_hole.pull_force = pull_force
+    # 属性已经通过元数据设置，不需要再次设置
 
     return black_hole
 

@@ -1,5 +1,13 @@
 extends Node2D
 
+# 信号
+signal weapon_upgraded(weapon_id, upgrade_type, new_level)
+signal enemy_hit(weapon_id, enemy, damage)
+signal enemy_killed(weapon_id, enemy, position)
+
+# 武器标识
+var weapon_id = "gun"
+
 # 基本属性
 var damage = 15
 var fire_rate = 0.5  # 每秒射击次数
@@ -164,13 +172,40 @@ func get_upgrade_options() -> Array:
 
 # 升级武器
 func upgrade(upgrade_type):
-	match upgrade_type:
+	# 调试输出
+	print("Gun upgrading: ", upgrade_type, " (type: ", typeof(upgrade_type), ")")
+
+	# 如果升级类型是整数，尝试将其转换为字符串
+	var type_str = upgrade_type
+	if typeof(upgrade_type) == TYPE_INT:
+		match upgrade_type:
+			0: # DAMAGE
+				type_str = "damage"
+			1: # ATTACK_SPEED
+				type_str = "fire_rate"
+			3: # PROJECTILE_COUNT
+				type_str = "bullet_count"
+
+	# 处理升级
+	match type_str:
 		"damage":
+			var old_damage = damage
 			damage_level += 1
 			damage = 15 + (damage_level - 1) * 5  # 每级+5伤害
-		"fire_rate":
+			print("Increased gun damage from ", old_damage, " to ", damage)
+		"fire_rate", "attack_speed":
+			var old_rate = fire_rate
 			fire_rate_level += 1
 			fire_rate = 0.5 + (fire_rate_level - 1) * 0.2  # 每级+0.2射速
-		"bullet_count":
+			print("Increased gun fire rate from ", old_rate, " to ", fire_rate)
+		"bullet_count", "projectile_count":
+			var old_count = bullet_count
 			bullet_count_level += 1
 			bullet_count = 1 + (bullet_count_level - 1)  # 每级+1子弹
+			print("Increased gun bullet count from ", old_count, " to ", bullet_count)
+		_:
+			print("Unknown upgrade type for gun: ", upgrade_type)
+
+	# 发出升级信号（如果有）
+	if has_signal("weapon_upgraded"):
+		emit_signal("weapon_upgraded", "gun", type_str, damage_level)

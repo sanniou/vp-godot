@@ -3,10 +3,13 @@ extends Node
 # 粒子辅助工具 - 用于处理粒子效果的兼容性问题
 
 # 设置粒子缩放
-static func set_particle_scale(particles: CPUParticles2D, scale_value: float) -> void:
+static func set_particle_scale(particles: CPUParticles2D, scale_value) -> void:
+	# 确保 scale_value 是浮点数
+	var float_scale = float(scale_value)
+
 	# 在 Godot 4 中，使用 set_param 方法设置粒子缩放
-	particles.set_param_min(CPUParticles2D.PARAM_SCALE, scale_value)
-	particles.set_param_max(CPUParticles2D.PARAM_SCALE, scale_value)
+	particles.set_param_min(CPUParticles2D.PARAM_SCALE, float_scale)
+	particles.set_param_max(CPUParticles2D.PARAM_SCALE, float_scale)
 
 # 设置粒子随机缩放
 static func set_particle_random_scale(particles: CPUParticles2D, min_scale: float, max_scale: float) -> void:
@@ -28,13 +31,13 @@ static func create_hit_effect(position: Vector2, color: Color = Color(1.0, 1.0, 
 	effect.gravity = Vector2(0, 0)
 	effect.initial_velocity_min = 30
 	effect.initial_velocity_max = 50
-	
+
 	# 使用兼容的方式设置缩放
 	set_particle_scale(effect, scale)
-	
+
 	effect.color = color
 	effect.global_position = position
-	
+
 	# 添加自动清理
 	var timer = Timer.new()
 	timer.wait_time = 1.0
@@ -42,7 +45,7 @@ static func create_hit_effect(position: Vector2, color: Color = Color(1.0, 1.0, 
 	timer.autostart = true
 	effect.add_child(timer)
 	timer.timeout.connect(func(): effect.queue_free())
-	
+
 	return effect
 
 # 创建通用的爆炸效果
@@ -60,13 +63,13 @@ static func create_explosion_effect(position: Vector2, color: Color = Color(1.0,
 	effect.gravity = Vector2(0, 0)
 	effect.initial_velocity_min = 50
 	effect.initial_velocity_max = 100
-	
+
 	# 使用兼容的方式设置缩放
 	set_particle_scale(effect, scale)
-	
+
 	effect.color = color
 	effect.global_position = position
-	
+
 	# 添加自动清理
 	var timer = Timer.new()
 	timer.wait_time = 1.0
@@ -74,5 +77,5 @@ static func create_explosion_effect(position: Vector2, color: Color = Color(1.0,
 	timer.autostart = true
 	effect.add_child(timer)
 	timer.timeout.connect(func(): effect.queue_free())
-	
+
 	return effect
