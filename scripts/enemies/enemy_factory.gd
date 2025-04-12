@@ -12,23 +12,28 @@ enum EnemyType {
     BOSS        # Boss敌人
 }
 
-# 敌人脚本
-var enemy_scripts = {
-    EnemyType.MELEE: preload("res://scripts/enemies/melee_enemy.gd"),
-    EnemyType.RANGED: preload("res://scripts/enemies/ranged_enemy.gd"),
-    EnemyType.ELITE: preload("res://scripts/enemies/elite_enemy.gd"),
-    EnemyType.BOSS: preload("res://scripts/enemies/boss_enemy.gd")
+# 敌人脚本路径
+var enemy_script_paths = {
+    EnemyType.MELEE: "res://scripts/enemies/melee_enemy.gd",
+    EnemyType.RANGED: "res://scripts/enemies/ranged_enemy.gd",
+    EnemyType.ELITE: "res://scripts/enemies/elite_enemy.gd",
+    EnemyType.BOSS: "res://scripts/enemies/boss_enemy.gd"
 }
 
 # 创建敌人
 func create_enemy(type: int, level: int = 1):
     # 检查类型是否有效
-    if not enemy_scripts.has(type):
+    if not enemy_script_paths.has(type):
         print("无效的敌人类型: ", type)
         return null
 
+    # 加载敌人脚本
+    var enemy_script = load(enemy_script_paths[type])
+    if enemy_script == null:
+        print("无法加载敌人脚本: ", enemy_script_paths[type])
+        return null
+
     # 创建敌人实例
-    var enemy_script = enemy_scripts[type]
     var enemy = enemy_script.new()
 
     # 手动初始化敌人

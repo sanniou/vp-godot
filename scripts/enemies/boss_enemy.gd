@@ -30,24 +30,10 @@ func setup_visuals():
     visual.position = Vector2(-40, -40)
     add_child(visual)
 
-    # 添加生命条
-    var health_bar = ProgressBar.new()
-    health_bar.max_value = max_health
-    health_bar.value = current_health
-    health_bar.size = Vector2(80, 8)
-    health_bar.position = Vector2(-40, -55)
-    add_child(health_bar)
-
-    # 添加护盾条
-    if shield > 0:
-        var shield_bar = ProgressBar.new()
-        shield_bar.max_value = max_health * 0.5  # 护盾最大值为最大生命值的50%
-        shield_bar.value = shield
-        shield_bar.size = Vector2(80, 5)
-        shield_bar.position = Vector2(-40, -62)
-        shield_bar.modulate = Color(0.2, 0.6, 1.0)  # 蓝色
-        shield_bar.name = "ShieldBar"
-        add_child(shield_bar)
+    # 血条和护盾条已经在基类中设置，不需要在这里创建
+    # 调用基类的设置方法
+    setup_health_bar()
+    setup_shield_bar()
 
     # 添加阶段指示器
     var phase_indicator = Label.new()

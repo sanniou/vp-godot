@@ -12,24 +12,10 @@ func setup_visuals():
     visual.position = Vector2(-25, -25)
     add_child(visual)
 
-    # 添加生命条
-    var health_bar = ProgressBar.new()
-    health_bar.max_value = max_health
-    health_bar.value = current_health
-    health_bar.size = Vector2(50, 5)
-    health_bar.position = Vector2(-25, -35)
-    add_child(health_bar)
-
-    # 添加护盾条
-    if shield > 0:
-        var shield_bar = ProgressBar.new()
-        shield_bar.max_value = max_health * 0.5  # 护盾最大值为最大生命值的50%
-        shield_bar.value = shield
-        shield_bar.size = Vector2(50, 3)
-        shield_bar.position = Vector2(-25, -40)
-        shield_bar.modulate = Color(0.2, 0.6, 1.0)  # 蓝色
-        shield_bar.name = "ShieldBar"
-        add_child(shield_bar)
+    # 血条和护盾条已经在基类中设置，不需要在这里创建
+    # 调用基类的设置方法
+    setup_health_bar()
+    setup_shield_bar()
 
 # 重写攻击系统设置
 func setup_attack_system():
@@ -39,12 +25,8 @@ func setup_attack_system():
 
 # 重写更新护盾
 func update_shield(delta):
+    # 调用基类的更新护盾方法，已经包含了护盾条更新
     super.update_shield(delta)
-
-    # 更新护盾条
-    var shield_bar = find_child("ShieldBar")
-    if shield_bar:
-        shield_bar.value = shield
 
 # 设置技能
 func setup_skills():

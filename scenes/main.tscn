@@ -105,6 +105,36 @@ text = "00:00"
 horizontal_alignment = 2
 vertical_alignment = 1
 
+[node name="SpecialEnemyProgressContainer" type="VBoxContainer" parent="UI/GameUI"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -200.0
+offset_top = 50.0
+offset_right = -20.0
+offset_bottom = 90.0
+grow_horizontal = 0
+
+[node name="Label" type="Label" parent="UI/GameUI/SpecialEnemyProgressContainer"]
+layout_mode = 2
+text = "下一个特殊敌人"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="SpecialEnemyProgress" type="ProgressBar" parent="UI/GameUI/SpecialEnemyProgressContainer"]
+layout_mode = 2
+value = 50.0
+show_percentage = false
+
+[node name="EnemyIcon" type="ColorRect" parent="UI/GameUI/SpecialEnemyProgressContainer/SpecialEnemyProgress"]
+layout_mode = 0
+offset_left = -15.0
+offset_top = -5.0
+offset_right = 5.0
+offset_bottom = 15.0
+color = Color(0.8, 0.2, 0.2, 1)
+
 [node name="RelicsPanel" type="PanelContainer" parent="UI/GameUI"]
 layout_mode = 1
 anchors_preset = 1

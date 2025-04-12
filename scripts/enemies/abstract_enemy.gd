@@ -160,34 +160,11 @@ func setup_visuals():
     visual.position = Vector2(-20, -20)
     add_child(visual)
 
-    # 添加生命条
-    var health_bar = ProgressBar.new()
-    health_bar.name = "HealthBar"  # 给生命条命名，便于查找
-    health_bar.max_value = max_health
-    health_bar.value = current_health
-    health_bar.size = Vector2(40, 5)
-    health_bar.position = Vector2(-20, -30)
+    # 设置血条
+    setup_health_bar()
 
-    # 设置生命条样式
-    var style_box = StyleBoxFlat.new()
-    style_box.bg_color = Color(0.8, 0, 0, 1)  # 红色生命条
-    style_box.corner_radius_top_left = 2
-    style_box.corner_radius_top_right = 2
-    style_box.corner_radius_bottom_left = 2
-    style_box.corner_radius_bottom_right = 2
-    health_bar.add_theme_stylebox_override("fill", style_box)
-
-    # 设置背景样式
-    var bg_style = StyleBoxFlat.new()
-    bg_style.bg_color = Color(0.2, 0.2, 0.2, 0.8)  # 灰色背景
-    bg_style.corner_radius_top_left = 2
-    bg_style.corner_radius_top_right = 2
-    bg_style.corner_radius_bottom_left = 2
-    bg_style.corner_radius_bottom_right = 2
-    health_bar.add_theme_stylebox_override("background", bg_style)
-
-    # 添加到敌人
-    add_child(health_bar)
+    # 设置护盾条（如果有护盾）
+    setup_shield_bar()
 
     # 调试输出
     # print("Health bar created: max_value = ", health_bar.max_value, ", value = ", health_bar.value)
@@ -303,6 +280,132 @@ func update_status_timers(delta):
         if burn_timer <= 0:
             is_burning = false
 
+# 设置血条
+func setup_health_bar():
+    # 获取血条大小和位置
+    var health_bar_width = 40
+    var health_bar_height = 1
+    var health_bar_position_y = -30
+
+    # 根据敌人类型调整血条大小和位置
+    match enemy_type:
+        EnemyType.ELITE:
+            health_bar_width = 50
+            health_bar_position_y = -35
+        EnemyType.BOSS:
+            health_bar_width = 80
+            health_bar_position_y = -50
+
+    # 检查是否已经存在血条
+    var existing_health_bar = find_child("HealthBar")
+    if existing_health_bar:
+        # 调整现有血条的大小和位置
+        existing_health_bar.position = Vector2(-health_bar_width/2, health_bar_position_y)
+        existing_health_bar.custom_minimum_size = Vector2(health_bar_width, health_bar_height)
+
+        # 调整血条背景和前景大小
+        var bg = existing_health_bar.find_child("Background")
+        if bg:
+            bg.size = Vector2(health_bar_width, health_bar_height)
+
+        var fill = existing_health_bar.find_child("Fill")
+        if fill:
+            fill.size.x = health_bar_width * (float(current_health) / max_health)
+            fill.size.y = health_bar_height
+
+        return
+
+    # 创建新的血条
+    var health_bar = Control.new()
+    health_bar.name = "HealthBar"  # 给生命条命名，便于查找
+    health_bar.position = Vector2(-health_bar_width/2, health_bar_position_y)  # 调整位置，浮在敌人头顶
+    health_bar.custom_minimum_size = Vector2(health_bar_width, health_bar_height)  # 设置容器大小
+
+    # 创建血条背景
+    var bg = ColorRect.new()
+    bg.name = "Background"
+    bg.size = Vector2(health_bar_width, health_bar_height)  # 设置背景大小
+    bg.color = Color(0.2, 0.2, 0.2, 0.7)  # 灰色背景
+    health_bar.add_child(bg)
+
+    # 创建血条前景
+    var fill = ColorRect.new()
+    fill.name = "Fill"
+    fill.size = Vector2(health_bar_width * (float(current_health) / max_health), health_bar_height)  # 初始大小，根据生命值调整
+    fill.color = Color(0.8, 0, 0, 1)  # 红色生命条
+    health_bar.add_child(fill)
+
+    # 添加到敌人
+    add_child(health_bar)
+
+
+
+# 设置护盾条
+func setup_shield_bar():
+    # 如果有护盾，添加护盾条
+    if shield > 0:
+        # 检查是否已经存在护盾条
+        var existing_shield_bar = find_child("ShieldBar")
+        if existing_shield_bar:
+            return  # 已经存在，不需要再创建
+
+        # 创建护盾条
+        var shield_bar = Control.new()
+        shield_bar.name = "ShieldBar"
+
+        # 根据敌人类型调整护盾条大小和位置
+        var shield_width = 40
+        var shield_position_y = -35
+
+        match enemy_type:
+            EnemyType.ELITE:
+                shield_width = 50
+                shield_position_y = -40
+            EnemyType.BOSS:
+                shield_width = 80
+                shield_position_y = -55
+
+        shield_bar.position = Vector2(-shield_width/2, shield_position_y)
+        shield_bar.custom_minimum_size = Vector2(shield_width, 1)
+
+        # 创建护盾条背景
+        var bg = ColorRect.new()
+        bg.name = "Background"
+        bg.size = Vector2(shield_width, 1)
+        bg.color = Color(0.1, 0.1, 0.3, 0.7)  # 深蓝色背景
+        shield_bar.add_child(bg)
+
+        # 创建护盾条前景
+        var fill = ColorRect.new()
+        fill.name = "Fill"
+        fill.size = Vector2(shield_width, 1)
+        fill.color = Color(0.2, 0.6, 1.0, 1.0)  # 蓝色护盾条
+        shield_bar.add_child(fill)
+
+        # 添加到敌人
+        add_child(shield_bar)
+
+        # 更新护盾条宽度
+        update_shield_bar()
+
+# 更新护盾条
+func update_shield_bar():
+    var shield_bar = find_child("ShieldBar")
+    if shield_bar and shield >= 0:
+        var fill = shield_bar.find_child("Fill")
+        if fill:
+            var max_shield = max_health * 0.5  # 护盾最大值为最大生命值的50%
+            var shield_percent = float(shield) / max_shield
+            var shield_width = 40
+
+            match enemy_type:
+                EnemyType.ELITE:
+                    shield_width = 50
+                EnemyType.BOSS:
+                    shield_width = 80
+
+            fill.size.x = shield_width * shield_percent
+
 # 更新护盾
 func update_shield(delta):
     if shield < 0:
@@ -311,6 +414,9 @@ func update_shield(delta):
     # 护盾再生
     if shield_regeneration > 0 and shield < max_health * 0.5:  # 护盾最多为最大生命值的50%
         shield += shield_regeneration * delta
+
+    # 更新护盾条
+    update_shield_bar()
 
 # 更新攻击计时器
 func update_attack_timer(delta):
@@ -368,39 +474,7 @@ func take_damage(amount, damage_type = "physical"):
     current_health -= final_damage
 
     # 更新生命条
-    var health_bar = find_child("HealthBar")
-
-    # 如果生命条不存在，创建一个
-    if not health_bar:
-        # print("Creating health bar in take_damage")
-        health_bar = ProgressBar.new()
-        health_bar.name = "HealthBar"
-        health_bar.size = Vector2(40, 5)
-        health_bar.position = Vector2(-20, -30)
-
-        # 设置生命条样式
-        var style_box = StyleBoxFlat.new()
-        style_box.bg_color = Color(0.8, 0, 0, 1)  # 红色生命条
-        style_box.corner_radius_top_left = 2
-        style_box.corner_radius_top_right = 2
-        style_box.corner_radius_bottom_left = 2
-        style_box.corner_radius_bottom_right = 2
-        health_bar.add_theme_stylebox_override("fill", style_box)
-
-        # 设置背景样式
-        var bg_style = StyleBoxFlat.new()
-        bg_style.bg_color = Color(0.2, 0.2, 0.2, 0.8)  # 灰色背景
-        bg_style.corner_radius_top_left = 2
-        bg_style.corner_radius_top_right = 2
-        bg_style.corner_radius_bottom_left = 2
-        bg_style.corner_radius_bottom_right = 2
-        health_bar.add_theme_stylebox_override("background", bg_style)
-
-        add_child(health_bar)
-
-    # 确保生命条的最大值和当前值正确设置
-    health_bar.max_value = max_health
-    health_bar.value = current_health
+    setup_health_bar()
 
     # 调试输出
     # print("Enemy health: ", current_health, "/", max_health, " = ", (current_health / max_health) * 100, "%")

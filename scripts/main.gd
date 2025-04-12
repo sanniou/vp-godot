@@ -15,6 +15,18 @@ var enemy_spawn_interval = 1.0  # Spawn enemies every second
 var difficulty_increase_timer = 0
 var difficulty_increase_interval = 60.0  # Increase difficulty every minute
 
+# 精英/Boss进度条变量
+var special_enemy_progress = 0.0
+var special_enemy_progress_max = 100.0
+var special_enemy_progress_rate = 0.5  # 每秒增加的进度
+var next_special_enemy_type = "elite"  # 下一个特殊敌人类型："elite" 或 "boss"
+var special_enemy_spawned_recently = false  # 是否最近生成了特殊敌人
+var special_enemy_cooldown = 30.0  # 特殊敌人生成后的冷却时间（秒）
+var special_enemy_cooldown_timer = 0.0
+
+# 信号
+signal special_enemy_spawned(enemy_type)
+
 # 经验系统
 var experience_manager = null
 var experience_orb_manager = null
@@ -155,6 +167,13 @@ func _ready():
 		else:
 			print("Error: enemy_spawner does not have enemy_died signal")
 
+		# 连接特殊敌人生成信号
+		if has_signal("special_enemy_spawned"):
+			print("Connecting special_enemy_spawned signal")
+			special_enemy_spawned.connect(_on_special_enemy_spawned)
+		else:
+			print("Error: main scene does not have special_enemy_spawned signal")
+
 	# Initialize achievement manager
 	achievement_manager = SimpleAchievementSystem.new()
 	achievement_manager.name = "AchievementManager"
@@ -180,6 +199,10 @@ func _ready():
 
 	# Load selected relics from global
 	load_selected_relics()
+
+	# 初始化特殊敌人进度条
+	update_special_enemy_icon()
+	update_special_enemy_progress_bar()
 
 	# Show start screen
 	show_start_screen()
@@ -211,6 +234,33 @@ func _process(delta):
 			difficulty_increase_timer = 0
 			increase_difficulty()
 
+		# 更新精英/Boss进度条
+		if special_enemy_spawned_recently:
+			# 如果最近生成了特殊敌人，则进入冷却时间
+			special_enemy_cooldown_timer += delta
+			if special_enemy_cooldown_timer >= special_enemy_cooldown:
+				special_enemy_spawned_recently = false
+				special_enemy_cooldown_timer = 0.0
+				special_enemy_progress = 0.0
+				# 切换下一个特殊敌人类型
+				if next_special_enemy_type == "elite":
+					next_special_enemy_type = "boss"
+				else:
+					next_special_enemy_type = "elite"
+				# 更新进度条图标颜色
+				update_special_enemy_icon()
+		else:
+			# 如果没有最近生成特殊敌人，则增加进度
+			special_enemy_progress += special_enemy_progress_rate * delta
+			if special_enemy_progress >= special_enemy_progress_max:
+				# 生成特殊敌人
+				spawn_special_enemy()
+				special_enemy_spawned_recently = true
+				special_enemy_progress = special_enemy_progress_max
+
+		# 更新进度条UI
+		update_special_enemy_progress_bar()
+
 		# Handle regeneration from Golden Apple relic
 		if player and relic_manager and relic_manager.has_relic("golden_apple"):
 			regeneration_timer += delta
@@ -218,6 +268,94 @@ func _process(delta):
 			if regeneration_timer >= relic.interval:
 				regeneration_timer = 0
 				player.heal(relic.value)
+
+# 生成特殊敌人（精英或Boss）
+func spawn_special_enemy():
+	# 根据类型生成特殊敌人
+	var enemy_type = 2  # ELITE = 2
+	if next_special_enemy_type == "boss":
+		enemy_type = 3  # BOSS = 3
+
+	# 计算敌人等级，基于当前难度
+	var enemy_level = 1 + int(enemy_spawner.difficulty / 2)
+
+	# 创建敌人
+	var enemy = enemy_spawner.create_enemy(enemy_type, enemy_level)
+
+	# 设置生成位置
+	var spawn_direction = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+	var spawn_distance = 800  # 生成距离
+	var spawn_position = player.global_position + (spawn_direction * spawn_distance)
+
+	# 设置敌人属性
+	enemy.global_position = spawn_position
+
+	# 安全地设置目标
+	if "target" in enemy:
+		enemy.target = player
+
+	# 添加到场景
+	get_tree().current_scene.add_child(enemy)
+
+	# 发出特殊敌人生成信号
+	special_enemy_spawned.emit(next_special_enemy_type)
+
+	# 显示特殊敌人生成消息
+	var message = "精英敌人出现了！"
+	if next_special_enemy_type == "boss":
+		message = "Boss出现了！"
+	show_difficulty_message(message)
+
+# 更新特殊敌人进度条
+func update_special_enemy_progress_bar():
+	# 获取进度条
+	var progress_bar = $UI/GameUI/SpecialEnemyProgressContainer/SpecialEnemyProgress
+	if progress_bar:
+		# 设置进度条值
+		progress_bar.max_value = special_enemy_progress_max
+		progress_bar.value = special_enemy_progress
+
+		# 更新敌人图标位置
+		var enemy_icon = progress_bar.get_node("EnemyIcon")
+		if enemy_icon:
+			# 计算图标位置，使其根据进度移动
+			var progress_ratio = special_enemy_progress / special_enemy_progress_max
+			# 在下一帧获取进度条宽度，确保已经渲染
+			await get_tree().process_frame
+			var bar_width = progress_bar.size.x
+			if bar_width <= 0:
+				bar_width = 180  # 默认宽度
+			# 计算图标位置，确保它不会超出进度条范围
+			var icon_width = 20  # 图标宽度
+			var icon_position = progress_ratio * bar_width - (icon_width / 2)
+			# 限制图标位置在进度条范围内
+			icon_position = clamp(icon_position, -icon_width, bar_width)
+			enemy_icon.position.x = icon_position
+
+# 更新特殊敌人图标
+func update_special_enemy_icon():
+	# 获取敌人图标
+	var enemy_icon = $UI/GameUI/SpecialEnemyProgressContainer/SpecialEnemyProgress/EnemyIcon
+	if enemy_icon:
+		# 根据下一个特殊敌人类型设置颜色
+		if next_special_enemy_type == "elite":
+			enemy_icon.color = Color(0.8, 0.8, 0.2, 1.0)  # 黄色表示精英
+		else:
+			enemy_icon.color = Color(0.8, 0.2, 0.2, 1.0)  # 红色表示Boss
+
+# 处理特殊敌人生成信号
+func _on_special_enemy_spawned(enemy_type):
+	# 记录特殊敌人生成
+	print("Special enemy spawned: ", enemy_type)
+
+	# 更新统计信息
+	if achievement_manager:
+		if enemy_type == "elite":
+			achievement_manager.update_statistic("elite_enemies_killed", 1, true)
+		else:
+			achievement_manager.update_statistic("boss_enemies_killed", 1, true)
+
+	# 可以在这里添加更多特殊敌人生成时的逻辑
 
 # Start or restart the game
 func start_game():
@@ -228,6 +366,17 @@ func start_game():
 	enemy_spawn_interval = 1.0
 	difficulty_increase_timer = 0
 	regeneration_timer = 0
+
+	# 重置特殊敌人进度条
+	special_enemy_progress = 0.0
+	special_enemy_spawned_recently = false
+	special_enemy_cooldown_timer = 0.0
+	next_special_enemy_type = "elite"
+
+	# 在下一帧更新图标和进度条，确保 UI 已经准备好
+	await get_tree().process_frame
+	update_special_enemy_icon()
+	update_special_enemy_progress_bar()
 
 	# 重置经验系统
 	experience_manager.reset()

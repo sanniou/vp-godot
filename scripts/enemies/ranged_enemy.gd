@@ -7,19 +7,7 @@ var attack_cooldown = 2.0
 var attack_timer = 0
 var projectile_speed = 150
 
-# 设置碰撞
-# 重写父类的 setup_collision 方法
-func setup_collision():
-	# 创建碰撞形状
-	var collision_shape = CollisionShape2D.new()
-	var shape = CircleShape2D.new()
-	shape.radius = 20
-	collision_shape.shape = shape
-	add_child(collision_shape)
-
-	# 设置碰撞层
-	collision_layer = 4  # 敌人层
-	collision_mask = 3   # 玩家层和墙壁层
+# 注意：不需要重写 setup_collision 方法，因为基类的实现已经足够
 
 # 设置视觉效果
 # 重写父类的 setup_visuals 方法
@@ -31,34 +19,10 @@ func setup_visuals():
 	visual.position = Vector2(-20, -20)
 	add_child(visual)
 
-	# 添加生命条
-	var health_bar = ProgressBar.new()
-	health_bar.name = "HealthBar"  # 给生命条命名，便于查找
-	health_bar.max_value = max_health
-	health_bar.value = current_health
-	health_bar.size = Vector2(40, 5)
-	health_bar.position = Vector2(-20, -30)
-
-	# 设置生命条样式
-	var style_box = StyleBoxFlat.new()
-	style_box.bg_color = Color(0.8, 0, 0, 1)  # 红色生命条
-	style_box.corner_radius_top_left = 2
-	style_box.corner_radius_top_right = 2
-	style_box.corner_radius_bottom_left = 2
-	style_box.corner_radius_bottom_right = 2
-	health_bar.add_theme_stylebox_override("fill", style_box)
-
-	# 设置背景样式
-	var bg_style = StyleBoxFlat.new()
-	bg_style.bg_color = Color(0.2, 0.2, 0.2, 0.8)  # 灰色背景
-	bg_style.corner_radius_top_left = 2
-	bg_style.corner_radius_top_right = 2
-	bg_style.corner_radius_bottom_left = 2
-	bg_style.corner_radius_bottom_right = 2
-	health_bar.add_theme_stylebox_override("background", bg_style)
-
-	# 添加到敌人
-	add_child(health_bar)
+	# 血条和护盾条已经在基类中设置，不需要在这里创建
+	# 调用基类的设置方法
+	setup_health_bar()
+	setup_shield_bar()
 
 func _ready():
 	# Call parent ready function
