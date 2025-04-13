@@ -3,6 +3,9 @@ class_name AchievementScreen
 
 signal back_pressed
 
+# 页面类型
+const PAGE_TYPE = UIManager.PageType.ACHIEVEMENTS
+
 # 节点引用
 @onready var title_label = $VBoxContainer/MarginContainer/TitleLabel
 @onready var progress_label = $VBoxContainer/HBoxContainer/ProgressLabel
@@ -158,6 +161,9 @@ func _on_filter_button_item_selected(index):
 # 返回按钮处理
 func _on_back_button_pressed():
 	emit_signal("back_pressed")
+
+	# 使用UIManager返回上一页
+	UIManager.go_back()
 
 # 成就解锁处理
 func _on_achievement_unlocked(achievement_id):

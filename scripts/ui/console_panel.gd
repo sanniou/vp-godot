@@ -2,6 +2,12 @@ extends Control
 
 # 控制台面板 - 游戏内调试控制台
 
+# 定义信号
+signal console_closed
+
+# 页面类型
+const PAGE_TYPE = UIManager.PageType.CONSOLE
+
 # 控制台管理器引用
 var console_manager = null
 
@@ -20,6 +26,15 @@ func _ready():
 	console_manager.command_executed.connect(_on_command_executed)
 	input_field.text_submitted.connect(_on_input_submitted)
 	toggle_button.pressed.connect(_on_toggle_button_pressed)
+
+	# 设置进程模式，确保在暂停时仍然可以交互
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
+	# 设置为最高层级
+	z_index = 100
+
+	# 设置鼠标过滤模式，确保可以接收鼠标事件
+	mouse_filter = Control.MOUSE_FILTER_STOP
 
 	# 确保控制台的所有子节点在暂停时也能工作
 	for child in get_children():
@@ -65,18 +80,7 @@ func _input(event):
 			# 处理 ESC 键，关闭控制台
 			elif event.pressed and event.keycode == KEY_ESCAPE:
 				# 关闭控制台
-				visible = false
-
-				# 检查是否需要恢复游戏
-				var main = get_tree().get_root().get_node_or_null("Main")
-				if main:
-					if main.pause_screen.visible:
-						# 如果暂停菜单可见，保持暂停状态
-						get_tree().paused = true
-					else:
-						# 如果暂停菜单不可见，恢复游戏
-						get_tree().paused = false
-
+				toggle_console()
 				get_viewport().set_input_as_handled()
 			# 处理回车键，确保在提交后保持焦点
 			elif event.pressed and event.keycode == KEY_ENTER:
@@ -85,25 +89,28 @@ func _input(event):
 
 # 切换控制台显示
 func toggle_console():
-	visible = !visible
-
 	if visible:
+		# 关闭控制台
+		hide()
+
+		# 发出控制台关闭信号
+		console_closed.emit()
+
+		# 使用UIManager返回上一页
+		UIManager.go_back()
+	else:
 		# 打开控制台
+		show()
+
+		# 使用UIManager打开控制台页面
+		UIManager.open_page(PAGE_TYPE)
+
+		# 确保游戏暂停
 		get_tree().paused = true
 
 		# 使用 call_deferred 确保在当前帧结束后获取焦点
 		# 这样可以避免焦点被其他控件抢占
 		call_deferred("_ensure_input_focus")
-	else:
-		# 关闭控制台
-		var main = get_tree().get_root().get_node_or_null("Main")
-		if main:
-			if main.pause_screen.visible:
-				# 如果暂停菜单可见，保持暂停状态
-				get_tree().paused = true
-			else:
-				# 如果暂停菜单不可见，恢复游戏
-				get_tree().paused = false
 
 # 添加消息到输出
 func add_message(text, color = Color.WHITE):
