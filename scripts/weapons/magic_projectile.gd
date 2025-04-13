@@ -58,7 +58,12 @@ func _on_body_entered(body):
 
 		# 应用最终伤害
 		var final_damage = damage_data["damage"]
-		body.take_damage(final_damage)
+
+		# 检查目标是否有take_damage方法
+		if body.has_method("take_damage"):
+			body.take_damage(final_damage)
+		else:
+			print("Warning: Body does not have take_damage method: ", body)
 
 		# 发出信号
 		var weapon_id = "magic_wand"

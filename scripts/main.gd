@@ -26,6 +26,7 @@ var special_enemy_cooldown_timer = 0.0
 
 # 信号
 signal special_enemy_spawned(enemy_type)
+signal game_over
 
 # 经验系统
 var experience_manager = null
@@ -134,18 +135,37 @@ func _ready():
 	debug_panel.set_experience_orb_manager(experience_orb_manager)
 
 	# Initialize UI
+	experience_bar.min_value = 0
 	experience_bar.max_value = experience_manager.experience_to_level
 	experience_bar.value = 0
+	experience_bar.show_percentage = true
+
+	# 调试输出经验条初始化
+	print("Experience bar initialized: min_value = ", experience_bar.min_value, ", max_value = ", experience_bar.max_value, ", value = ", experience_bar.value)
 
 	# Connect signals
 	$UI/GameOverScreen/RestartButton.pressed.connect(_on_restart_button_pressed)
-	$UI/StartScreen/StartButton.pressed.connect(_on_start_button_pressed)
 	$UI/PauseScreen/ResumeButton.pressed.connect(_on_resume_button_pressed)
 	$UI/PauseScreen/QuitButton.pressed.connect(_on_quit_button_pressed)
 	$UI/PauseScreen/ConsoleButton.pressed.connect(_on_console_button_pressed)
 	$UI/GameOverScreen/AchievementsButton.pressed.connect(_on_achievements_button_pressed)
 	$UI/AchievementsScreen/BackButton.pressed.connect(_on_achievements_back_button_pressed)
 	$UI/GameOverScreen/HomeButton.pressed.connect(_on_home_button_pressed)
+
+	# 连接首页按钮信号
+	var buttons_container = $UI/StartScreen/ButtonsContainer
+	if buttons_container:
+		var start_button = buttons_container.get_node("StartButton")
+		if start_button:
+			start_button.pressed.connect(_on_start_button_pressed)
+
+		var achievements_button = buttons_container.get_node("AchievementsButton")
+		if achievements_button:
+			achievements_button.pressed.connect(_on_achievements_button_pressed)
+
+		var settings_button = buttons_container.get_node("SettingsButton")
+		if settings_button:
+			settings_button.pressed.connect(_on_settings_button_pressed)
 
 	# 更新UI文本
 	update_ui_text()
@@ -203,6 +223,9 @@ func _ready():
 	# 初始化特殊敌人进度条
 	update_special_enemy_icon()
 	update_special_enemy_progress_bar()
+
+	# 初始化音频系统
+	init_audio_system()
 
 	# Show start screen
 	show_start_screen()
@@ -355,7 +378,164 @@ func _on_special_enemy_spawned(enemy_type):
 		else:
 			achievement_manager.update_statistic("boss_enemies_killed", 1, true)
 
-	# 可以在这里添加更多特殊敌人生成时的逻辑
+	# 播放特殊敌人音效
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if audio_manager:
+		if enemy_type == "elite":
+			# 播放精英敌人出现音效
+			audio_manager.play_sfx(AudioManager.SfxType.BOSS_ATTACK)
+		else:
+			# 播放Boss敌人出现音效
+			audio_manager.play_sfx(AudioManager.SfxType.BOSS_ATTACK)
+			# 切换到Boss音乐
+			audio_manager.play_music(AudioManager.MusicType.BOSS)
+
+# 初始化音频系统
+func init_audio_system():
+	# 获取音频管理器
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if not audio_manager:
+		print("Warning: AudioManager not found")
+		return
+
+	# 连接游戏状态变化信号
+	game_over.connect(_on_game_over)
+
+	# 初始化音频设置面板
+	var audio_settings_panel = load("res://scenes/ui/audio_settings_panel.tscn").instantiate()
+	audio_settings_panel.name = "AudioSettingsPanel"
+	audio_settings_panel.hide()
+	# 设置为最高层级
+	audio_settings_panel.z_index = 100
+	# 连接关闭信号
+	audio_settings_panel.settings_closed.connect(_on_audio_settings_closed)
+	$UI.add_child(audio_settings_panel)
+
+	# 连接控制台关闭信号
+	var console_panel = $UI/ConsolePanel
+	if console_panel:
+		console_panel.console_closed.connect(_on_console_closed)
+
+	# 初始化暂停菜单
+	var pause_menu = load("res://scenes/ui/pause_menu.tscn").instantiate()
+	pause_menu.name = "PauseMenu"
+	pause_menu.hide()
+	pause_menu.resume_game.connect(_on_resume_game)
+	pause_menu.quit_game.connect(_on_quit_game)
+	pause_menu.show_settings.connect(_on_show_settings)
+	pause_menu.show_console.connect(_on_show_console)
+	pause_menu.show_achievements.connect(_on_show_achievements)
+	pause_menu.return_to_home.connect(_on_return_to_home)
+	$UI.add_child(pause_menu)
+
+	# 播放菜单音乐
+	audio_manager.play_music(AudioManager.MusicType.MENU)
+
+# 游戏结束回调
+func _on_game_over():
+	# 播放游戏结束音效
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if audio_manager:
+		# 播放游戏结束音效
+		audio_manager.play_sfx(AudioManager.SfxType.PLAYER_DEATH)
+		# 切换到游戏结束音乐
+		audio_manager.play_music(AudioManager.MusicType.GAME_OVER)
+
+# 暂停游戏
+func pause_game():
+	if not game_running:
+		return
+
+	# 暂停游戏
+	get_tree().paused = true
+
+	# 显示暂停菜单
+	var pause_menu = $UI/PauseMenu
+	if pause_menu:
+		pause_menu.show_menu()
+
+	# 暂停音乐
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if audio_manager:
+		audio_manager.pause_music()
+
+# 恢复游戏
+func resume_game():
+	# 恢复游戏
+	get_tree().paused = false
+
+	# 隐藏暂停菜单
+	var pause_menu = $UI/PauseMenu
+	if pause_menu:
+		pause_menu.hide_menu()
+
+	# 隐藏设置面板
+	var audio_settings_panel = $UI/AudioSettingsPanel
+	if audio_settings_panel:
+		audio_settings_panel.hide()
+
+	# 恢复音乐
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if audio_manager:
+		audio_manager.resume_music()
+
+# 暂停菜单恢复游戏回调
+func _on_resume_game():
+	resume_game()
+
+# 暂停菜单退出游戏回调
+func _on_quit_game():
+	# 退出游戏
+	get_tree().quit()
+
+# 暂停菜单显示设置回调
+func _on_show_settings():
+	# 使用UIManager打开设置页面
+	UIManager.open_page(UIManager.PageType.AUDIO_SETTINGS)
+
+# 音频设置面板关闭回调
+func _on_audio_settings_closed():
+	# 使用UIManager处理页面导航，不需要手动处理
+	pass
+
+# 控制台关闭回调
+func _on_console_closed():
+	# 使用UIManager处理页面导航，不需要手动处理
+	pass
+
+# 暂停菜单显示控制台回调
+func _on_show_console():
+	# 使用UIManager打开控制台页面
+	UIManager.open_page(UIManager.PageType.CONSOLE)
+
+# 暂停菜单显示成就回调
+func _on_show_achievements():
+	# 使用UIManager打开成就页面
+	UIManager.open_page(UIManager.PageType.ACHIEVEMENTS)
+
+# 暂停菜单返回主页回调
+func _on_return_to_home():
+	# 恢复游戏
+	resume_game()
+
+	# 重置游戏状态
+	game_running = false
+	enemies_defeated = 0
+
+	# 清除现有敌人
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		enemy.queue_free()
+
+	# 清除现有经验球
+	for orb in get_tree().get_nodes_in_group("experience"):
+		orb.queue_free()
+
+	# 清除现有玩家
+	if player != null and is_instance_valid(player):
+		player.queue_free()
+
+	# 显示开始屏幕
+	show_start_screen()
 
 # Start or restart the game
 func start_game():
@@ -378,6 +558,11 @@ func start_game():
 	update_special_enemy_icon()
 	update_special_enemy_progress_bar()
 
+	# 播放游戏音乐
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if audio_manager:
+		audio_manager.play_music(AudioManager.MusicType.GAMEPLAY)
+
 	# 重置经验系统
 	experience_manager.reset()
 	experience_orb_manager.clear_all_orbs()
@@ -388,11 +573,40 @@ func start_game():
 
 	# Reset UI
 	health_bar.value = 100
-	experience_bar.max_value = experience_manager.experience_to_level
-	experience_bar.value = 0
 	level_label.text = "Level: %d" % experience_manager.current_level
 	game_over_screen.visible = false
 	level_up_screen.visible = false
+
+	# 直接更新经验条，不使用函数
+	experience_bar.min_value = 0
+	experience_bar.max_value = experience_manager.experience_to_level
+	experience_bar.value = experience_manager.current_experience
+	experience_bar.show_percentage = true
+
+	# 设置经验条样式
+	var font_color = Color(1, 1, 1, 1)
+	experience_bar.add_theme_color_override("font_color", font_color)
+	experience_bar.add_theme_font_size_override("font_size", 16)
+
+	# 设置百分比可见性
+	experience_bar.set("theme_override_constants/font_outline_size", 1)
+	experience_bar.set("percent_visible", true)
+
+	# 计算并设置自定义文本
+	var percent = 0
+	if experience_bar.max_value > 0:
+		percent = int((experience_bar.value / experience_bar.max_value) * 100)
+	experience_bar.set("text", str(percent) + "%")
+
+	# 强制更新经验条外观
+	experience_bar.queue_redraw()
+
+	# 调试输出经验条状态
+	print("Experience bar initialized in start_game: value = ", experience_bar.value, ", max_value = ", experience_bar.max_value, ", ratio = ",
+		experience_bar.value / experience_bar.max_value if experience_bar.max_value > 0 else 0, ", percentage = ", experience_bar.value / experience_bar.max_value * 100 if experience_bar.max_value > 0 else 0, "%")
+
+	# 强制更新经验条文本
+	experience_bar.tooltip_text = str(int(experience_manager.current_experience)) + " / " + str(int(experience_manager.experience_to_level))
 
 	# Clear existing enemies
 	for enemy in get_tree().get_nodes_in_group("enemies"):
@@ -576,9 +790,36 @@ func add_experience(amount, source = "default"):
 	# 使用经验管理器添加经验
 	var final_amount = experience_manager.add_experience(amount, source)
 
-	# 更新经验条
+	# 直接更新经验条，不使用函数
+	experience_bar.min_value = 0
 	experience_bar.max_value = experience_manager.experience_to_level
 	experience_bar.value = experience_manager.current_experience
+	experience_bar.show_percentage = true
+
+	# 设置经验条样式
+	var font_color = Color(1, 1, 1, 1)
+	experience_bar.add_theme_color_override("font_color", font_color)
+	experience_bar.add_theme_font_size_override("font_size", 16)
+
+	# 设置百分比可见性
+	experience_bar.set("theme_override_constants/font_outline_size", 1)
+	experience_bar.set("percent_visible", true)
+
+	# 计算并设置自定义文本
+	var percent = 0
+	if experience_bar.max_value > 0:
+		percent = int((experience_bar.value / experience_bar.max_value) * 100)
+	experience_bar.set("text", str(percent) + "%")
+
+	# 强制更新经验条外观
+	experience_bar.queue_redraw()
+
+	# 调试输出经验条状态
+	print("Experience bar directly updated: value = ", experience_bar.value, ", max_value = ", experience_bar.max_value, ", ratio = ",
+		experience_bar.value / experience_bar.max_value if experience_bar.max_value > 0 else 0, ", percentage = ", experience_bar.value / experience_bar.max_value * 100 if experience_bar.max_value > 0 else 0, "%")
+
+	# 强制更新经验条文本
+	experience_bar.tooltip_text = str(int(experience_manager.current_experience)) + " / " + str(int(experience_manager.experience_to_level))
 
 	# Update achievement statistics
 	if achievement_manager:
@@ -591,9 +832,36 @@ func _on_experience_level_up(new_level, overflow_exp):
 	# 更新等级标签
 	level_label.text = "Level: %d" % new_level
 
-	# 更新经验条
+	# 直接更新经验条，不使用函数
+	experience_bar.min_value = 0
 	experience_bar.max_value = experience_manager.experience_to_level
 	experience_bar.value = experience_manager.current_experience
+	experience_bar.show_percentage = true
+
+	# 设置经验条样式
+	var font_color = Color(1, 1, 1, 1)
+	experience_bar.add_theme_color_override("font_color", font_color)
+	experience_bar.add_theme_font_size_override("font_size", 16)
+
+	# 设置百分比可见性
+	experience_bar.set("theme_override_constants/font_outline_size", 1)
+	experience_bar.set("percent_visible", true)
+
+	# 计算并设置自定义文本
+	var percent = 0
+	if experience_bar.max_value > 0:
+		percent = int((experience_bar.value / experience_bar.max_value) * 100)
+	experience_bar.set("text", str(percent) + "%")
+
+	# 强制更新经验条外观
+	experience_bar.queue_redraw()
+
+	# 调试输出经验条状态
+	print("Experience bar updated after level up: value = ", experience_bar.value, ", max_value = ", experience_bar.max_value, ", ratio = ",
+		experience_bar.value / experience_bar.max_value if experience_bar.max_value > 0 else 0, ", percentage = ", experience_bar.value / experience_bar.max_value * 100 if experience_bar.max_value > 0 else 0, "%")
+
+	# 强制更新经验条文本
+	experience_bar.tooltip_text = str(int(experience_manager.current_experience)) + " / " + str(int(experience_manager.experience_to_level))
 
 	# 触发升级事件，应用遗物效果
 	if relic_manager:
@@ -622,6 +890,23 @@ func _on_experience_level_up(new_level, overflow_exp):
 
 	# Show level up screen
 	show_level_up_screen(false)
+
+# 更新经验条
+func update_experience_bar():
+	# 设置经验条的最大值和当前值
+	experience_bar.min_value = 0
+	experience_bar.max_value = experience_manager.experience_to_level
+	experience_bar.value = experience_manager.current_experience
+
+	# 确保经验条显示百分比
+	experience_bar.show_percentage = true
+
+	# 强制更新经验条外观
+	experience_bar.queue_redraw()
+
+	# 调试输出经验条状态
+	print("Experience bar updated: value = ", experience_bar.value, ", max_value = ", experience_bar.max_value, ", ratio = ",
+		experience_bar.value / experience_bar.max_value if experience_bar.max_value > 0 else 0, ", percentage = ", experience_bar.value / experience_bar.max_value * 100 if experience_bar.max_value > 0 else 0, "%")
 
 # Level up the player (for backward compatibility and console commands)
 func level_up(from_console = false):
@@ -990,14 +1275,11 @@ func _on_start_button_pressed():
 
 # Toggle pause state
 func toggle_pause():
-	if pause_screen.visible:
-		# Resume game
-		pause_screen.visible = false
-		get_tree().paused = false
+	# 使用新的暂停系统
+	if get_tree().paused:
+		resume_game()
 	else:
-		# Pause game
-		pause_screen.visible = true
-		get_tree().paused = true
+		pause_game()
 
 # Resume button pressed
 func _on_resume_button_pressed():
@@ -1023,8 +1305,8 @@ func _on_quit_button_pressed():
 	# Show start screen
 	show_start_screen()
 
-# Game over
-func game_over():
+# Handle game over
+func handle_game_over():
 	game_running = false
 
 	# Save achievements
@@ -1104,37 +1386,33 @@ func _on_restart_button_pressed():
 
 # Achievements button pressed
 func _on_achievements_button_pressed():
-	# Hide game over screen
-	game_over_screen.visible = false
-
-	# Load achievement screen scene if not already loaded
-	var achievement_screen_path = "res://scenes/ui/achievement_screen.tscn"
+	# 加载成就页面场景（如果不存在）
 	var achievement_screen = null
 
 	if has_node("UI/AchievementScreen"):
 		achievement_screen = get_node("UI/AchievementScreen")
 	else:
+		# 动态加载成就页面
+		var achievement_screen_path = "res://scenes/ui/achievement_screen.tscn"
 		var achievement_screen_scene = load(achievement_screen_path)
 		achievement_screen = achievement_screen_scene.instantiate()
 		$UI.add_child(achievement_screen)
 
-		# Connect back button signal
+		# 连接返回按钮信号
 		achievement_screen.back_pressed.connect(_on_achievements_back_button_pressed)
 
-	# Initialize achievement screen
-	achievement_screen.initialize(achievement_manager, language_manager)
+	# 初始化成屑页面
+	if achievement_screen:
+		achievement_screen.initialize(achievement_manager, language_manager)
 
-	# Show achievements screen
-	achievement_screen.visible = true
+		# 使用UIManager打开成就页面
+		UIManager.open_page(UIManager.PageType.ACHIEVEMENTS)
 
 # Achievements back button pressed
 func _on_achievements_back_button_pressed():
-	# Hide achievements screen
-	if has_node("UI/AchievementScreen"):
-		get_node("UI/AchievementScreen").visible = false
-
-	# Show game over screen
-	game_over_screen.visible = true
+	# 使用UIManager返回上一页
+	# 不需要手动处理，因为成就页面已经在自己的脚本中调用了UIManager.go_back()
+	pass
 
 # Achievement unlocked handler
 func _on_achievement_unlocked(achievement_id, achievement_name, achievement_description):
@@ -1208,7 +1486,7 @@ func _on_player_died():
 			return
 
 	# 如果没有防止死亡，则游戏结束
-	game_over()
+	handle_game_over()
 
 # Spawn a wave of enemies
 func spawn_enemy_wave(count, enemy_type):
@@ -1308,34 +1586,10 @@ func update_relics_display():
 	# 构建遗物显示文本
 	var text = ""
 	for relic_id in equipped_relics:
-		# 根据ID设置图标
-		var icon = "💫"  # 默认图标
-
-		match relic_id:
-			"phoenix_feather":
-				icon = "🔥"
-			"wisdom_crystal":
-				icon = "💎"
-			"magnetic_amulet":
-				icon = "🧲"
-			"heart_amulet":
-				icon = "❤️"
-			"lucky_clover":
-				icon = "🍀"
-			"shadow_cloak":
-				icon = "👻"
-			"upgrade_enhancer":
-				icon = "🔮"
-			"time_warper":
-				icon = "⏱️"
-			"elemental_resonance":
-				icon = "🔄"
-			"experience_catalyst":
-				icon = "✨"
-			"critical_amulet":
-				icon = "🔮"
-			"life_steal":
-				icon = "💉"
+		# 加载遗物工具类
+		var RelicUtils = load("res://scripts/utils/relic_utils.gd")
+		# 使用遗物工具类获取图标
+		var icon = RelicUtils.get_relic_icon(relic_id)
 
 		# 使用多语言系统获取遗物名称
 		var language_manager = get_node_or_null("/root/LanguageManager")
@@ -1347,9 +1601,7 @@ func update_relics_display():
 
 		# 如果没有翻译，使用格式化的名称
 		if display_name.is_empty():
-			display_name = relic_id.replace("_", " ")
-			if display_name.length() > 0:
-				display_name = display_name.substr(0, 1).to_upper() + display_name.substr(1)
+			display_name = RelicUtils.format_relic_name(relic_id)
 
 		text += icon + " " + display_name + "\n"
 
@@ -1363,8 +1615,22 @@ func update_ui_text():
 
 	# 更新首页文本
 	$UI/StartScreen/TitleLabel.text = language_manager.get_translation("game_title", "Vampire Survivors Clone")
-	$UI/StartScreen/StartButton.text = language_manager.get_translation("start_game", "Start Game")
 	$UI/StartScreen/ControlsLabel.text = language_manager.get_translation("controls_info", "Controls:\nWASD or Arrow Keys to move\nSurvive as long as possible!\nCollect experience orbs to level up")
+
+	# 更新首页按钮文本
+	var buttons_container = $UI/StartScreen/ButtonsContainer
+	if buttons_container:
+		var start_button = buttons_container.get_node("StartButton")
+		if start_button:
+			start_button.text = language_manager.get_translation("start_game", "开始游戏")
+
+		var achievements_button = buttons_container.get_node("AchievementsButton")
+		if achievements_button:
+			achievements_button.text = language_manager.get_translation("achievements", "成就")
+
+		var settings_button = buttons_container.get_node("SettingsButton")
+		if settings_button:
+			settings_button.text = language_manager.get_translation("settings", "设置")
 
 	# 更新游戏结束界面文本
 	$UI/GameOverScreen/GameOverLabel.text = language_manager.get_translation("game_over", "Game Over")
@@ -1471,3 +1737,13 @@ func _notification(what):
 # 获取语言管理器函数，供其他脚本调用
 func get_language_manager():
 	return language_manager
+
+# 设置按钮点击回调
+func _on_settings_button_pressed():
+	# 播放UI点击音效
+	var audio_manager = get_node_or_null("/root/AudioManager")
+	if audio_manager:
+		audio_manager.play_sfx(AudioManager.SfxType.UI_CLICK)
+
+	# 使用UIManager打开音频设置面板
+	UIManager.open_page(UIManager.PageType.AUDIO_SETTINGS)
