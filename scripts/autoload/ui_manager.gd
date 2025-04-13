@@ -22,6 +22,9 @@ var current_page = PageType.NONE
 # 页面节点引用
 var page_nodes = {}
 
+# 记录设置页面的入口点
+var settings_entry_point = PageType.NONE
+
 # 主场景引用
 var main_scene = null
 
@@ -110,6 +113,10 @@ func open_page(page_type):
 	if current_page != PageType.NONE:
 		page_stack.push_back(current_page)
 
+		# 记录设置页面的入口点
+		if page_type == PageType.AUDIO_SETTINGS or page_type == PageType.ACHIEVEMENTS or page_type == PageType.CONSOLE:
+			settings_entry_point = current_page
+
 		# 隐藏当前页面
 		_hide_page(current_page)
 	elif page_type == PageType.ACHIEVEMENTS or page_type == PageType.AUDIO_SETTINGS or page_type == PageType.CONSOLE:
@@ -117,14 +124,17 @@ func open_page(page_type):
 		# 尝试检测当前可见的页面并将其压入栈
 		if page_nodes[PageType.START_SCREEN] and page_nodes[PageType.START_SCREEN].visible:
 			page_stack.push_back(PageType.START_SCREEN)
+			settings_entry_point = PageType.START_SCREEN
 			_hide_page(PageType.START_SCREEN)
 			print("UIManager: 从开始页面打开页面，将开始页面压入栈")
 		elif page_nodes[PageType.GAME_OVER] and page_nodes[PageType.GAME_OVER].visible:
 			page_stack.push_back(PageType.GAME_OVER)
+			settings_entry_point = PageType.GAME_OVER
 			_hide_page(PageType.GAME_OVER)
 			print("UIManager: 从游戏结束页面打开页面，将游戏结束页面压入栈")
 		elif page_nodes[PageType.PAUSE_MENU] and page_nodes[PageType.PAUSE_MENU].visible:
 			page_stack.push_back(PageType.PAUSE_MENU)
+			settings_entry_point = PageType.PAUSE_MENU
 			_hide_page(PageType.PAUSE_MENU)
 			print("UIManager: 从暂停菜单打开页面，将暂停菜单压入栈")
 
@@ -144,13 +154,19 @@ func go_back():
 	if page_stack.is_empty():
 		push_warning("UIManager: 页面栈为空，无法返回")
 
-		# 特殊处理：如果页面栈为空，尝试返回到开始页面
+		# 特殊处理：如果页面栈为空，尝试返回到设置页面的入口点
 		if current_page == PageType.AUDIO_SETTINGS or current_page == PageType.ACHIEVEMENTS or current_page == PageType.CONSOLE:
 			# 隐藏当前页面
 			_hide_page(current_page)
 
-			# 尝试显示开始页面
-			if page_nodes[PageType.START_SCREEN]:
+			# 如果有记录的入口点，返回到入口点
+			if settings_entry_point != PageType.NONE and page_nodes[settings_entry_point]:
+				current_page = settings_entry_point
+				_show_page(settings_entry_point)
+				print("UIManager: 页面栈为空，返回到入口点: ", settings_entry_point)
+				return
+			# 如果没有入口点，尝试返回到开始页面
+			elif page_nodes[PageType.START_SCREEN]:
 				current_page = PageType.START_SCREEN
 				_show_page(PageType.START_SCREEN)
 				print("UIManager: 页面栈为空，返回到开始页面")

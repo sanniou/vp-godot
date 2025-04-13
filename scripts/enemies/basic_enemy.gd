@@ -1,11 +1,10 @@
-extends "res://scripts/enemies/abstract_enemy.gd"
+extends "res://scripts/enemies/enemy.gd"
 class_name BasicEnemy
 
-# 预加载抽象敌人类
-const AbstractEnemy = preload("res://scripts/enemies/abstract_enemy.gd")
-
 func _init():
-    super._init("basic_enemy", "基本敌人", AbstractEnemy.EnemyType.BASIC)
+    super._init()
+    enemy_id = "basic_enemy"
+    enemy_name = "基本敌人"
 
 func _ready():
     # Call parent ready function

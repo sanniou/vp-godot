@@ -221,9 +221,12 @@ func upgrade(upgrade_type):
 
 # 获取武器升级选项
 func get_upgrade_options():
+	# 使用通用翻译辅助工具
+	var Tr = load("res://scripts/language/tr.gd")
+
 	return [
-		{"type": 0, "name": "伤害 +10", "description": "增加闪电伤害", "icon": "💥"},
-		{"type": 1, "name": "攻击速度 +20%", "description": "增加闪电攻击速度", "icon": "⚡"},
-		{"type": 2, "name": "链数 +1", "description": "增加闪电链数", "icon": "🔗"},
-		{"type": 3, "name": "范围 +30", "description": "增加闪电链范围", "icon": "💫"}
+		{"type": 0, "name": Tr.weapon_upgrade("damage", "伤害 +10"), "description": Tr.weapon_upgrade_desc("damage", "增加闪电伤害"), "icon": "💥"},
+		{"type": 1, "name": Tr.weapon_upgrade("attack_speed", "攻击速度 +20%"), "description": Tr.weapon_upgrade_desc("attack_speed", "增加闪电攻击速度"), "icon": "⚡"},
+		{"type": 2, "name": Tr.weapon_upgrade("projectile_count", "链数 +1"), "description": Tr.weapon_upgrade_desc("projectile_count", "增加闪电链数"), "icon": "🔗"},
+		{"type": 3, "name": Tr.weapon_upgrade("range", "范围 +30"), "description": Tr.weapon_upgrade_desc("range", "增加闪电链范围"), "icon": "💫"}
 	]

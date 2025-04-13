@@ -260,12 +260,11 @@ func _physics_process(delta):
         approach_cooldown_timer -= delta
         if approach_cooldown_timer <= 0:
             cannot_approach_player = false
-            print("Enemy can approach player again: ", enemy_name)
+            # 敌人可以再次接近玩家
 
     # 如果正在被击退，保持当前速度并执行移动
     if is_knocked_back:
-        # 打印当前速度
-        print("Knocked back enemy velocity: ", velocity)
+        # 保持击退速度
         # 仅执行移动，不改变速度
         move_and_slide()
         return
@@ -368,9 +367,7 @@ func setup_health_bar():
     health_bar.set_max_value(max_health)
     health_bar.set_value(current_health)
 
-    # 调试输出
-    print("Created health bar for ", enemy_name, ": max_health = ", max_health, ", current_health = ", current_health)
-    print("Health bar settings: max_value = ", health_bar.max_value, ", current_value = ", health_bar.current_value)
+    # 初始化生命条
 
     # 设置颜色和闪烁效果
     var fill_color = Color(0.8, 0, 0, 1)  # 默认红色
@@ -559,9 +556,7 @@ func take_damage(amount, damage_type = "physical"):
         # 强制重绘
         health_bar.queue_redraw()
 
-        # 调试输出
-        print("Enemy ", enemy_name, " health: ", current_health, "/", max_health, " = ", (current_health / max_health) * 100, "%")
-        print("Health bar: max_value = ", health_bar.max_value, ", value = ", health_bar.current_value, ", ratio = ", health_bar.current_value / health_bar.max_value)
+        # 更新生命条
 
     # 发出受伤信号
     damaged.emit(final_damage)
@@ -650,8 +645,7 @@ func apply_knockback(direction, force):
     # 进一步减小击退力度，使敌人被击退约一个身位
     force *= 0.1  # 进一步减小击退力度
 
-    # 打印击退信息
-    print("Applying knockback to enemy: ", enemy_name, ", force: ", force)
+    # 应用击退力度
 
     # 设置击退状态
     is_knocked_back = true
@@ -735,8 +729,7 @@ func check_player_collision():
         # 更新碰撞时间
         last_collision_time = current_time
 
-        # 打印碰撞信息
-        print("Enemy ", enemy_name, " actively detected collision with player, distance: ", distance)
+        # 检测到与玩家的碰撞
 
         # 触发玩家的碰撞处理
         if player.has_method("_process_collision"):

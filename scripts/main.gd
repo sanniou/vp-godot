@@ -140,8 +140,7 @@ func _ready():
 	experience_bar.value = 0
 	experience_bar.show_percentage = true
 
-	# 调试输出经验条初始化
-	print("Experience bar initialized: min_value = ", experience_bar.min_value, ", max_value = ", experience_bar.max_value, ", value = ", experience_bar.value)
+	# 初始化经验条
 
 	# Connect signals
 	$UI/GameOverScreen/RestartButton.pressed.connect(_on_restart_button_pressed)
@@ -182,17 +181,11 @@ func _ready():
 
 		# Connect enemy spawner signals
 		if enemy_spawner.has_signal("enemy_died"):
-			print("Connecting enemy_died signal")
 			enemy_spawner.enemy_died.connect(_on_enemy_died)
-		else:
-			print("Error: enemy_spawner does not have enemy_died signal")
 
 		# 连接特殊敌人生成信号
 		if has_signal("special_enemy_spawned"):
-			print("Connecting special_enemy_spawned signal")
 			special_enemy_spawned.connect(_on_special_enemy_spawned)
-		else:
-			print("Error: main scene does not have special_enemy_spawned signal")
 
 	# Initialize achievement manager
 	achievement_manager = SimpleAchievementSystem.new()
@@ -343,8 +336,7 @@ func update_special_enemy_progress_bar():
 		if enemy_icon:
 			# 计算图标位置，使其根据进度移动
 			var progress_ratio = special_enemy_progress / special_enemy_progress_max
-			# 在下一帧获取进度条宽度，确保已经渲染
-			await get_tree().process_frame
+			# 获取进度条宽度
 			var bar_width = progress_bar.size.x
 			if bar_width <= 0:
 				bar_width = 180  # 默认宽度
@@ -354,6 +346,15 @@ func update_special_enemy_progress_bar():
 			# 限制图标位置在进度条范围内
 			icon_position = clamp(icon_position, -icon_width, bar_width)
 			enemy_icon.position.x = icon_position
+
+		# 确保进度条标签显示正确的文本
+		var label = $UI/GameUI/SpecialEnemyProgressContainer/Label
+		if label:
+			var Tr = load("res://scripts/language/tr.gd")
+			if next_special_enemy_type == "elite":
+				label.text = Tr.get_tr("next_elite_enemy", "下一个精英敌人")
+			else:
+				label.text = Tr.get_tr("next_boss_enemy", "下一个Boss敌人")
 
 # 更新特殊敌人图标
 func update_special_enemy_icon():
@@ -368,9 +369,6 @@ func update_special_enemy_icon():
 
 # 处理特殊敌人生成信号
 func _on_special_enemy_spawned(enemy_type):
-	# 记录特殊敌人生成
-	print("Special enemy spawned: ", enemy_type)
-
 	# 更新统计信息
 	if achievement_manager:
 		if enemy_type == "elite":
@@ -601,9 +599,7 @@ func start_game():
 	# 强制更新经验条外观
 	experience_bar.queue_redraw()
 
-	# 调试输出经验条状态
-	print("Experience bar initialized in start_game: value = ", experience_bar.value, ", max_value = ", experience_bar.max_value, ", ratio = ",
-		experience_bar.value / experience_bar.max_value if experience_bar.max_value > 0 else 0, ", percentage = ", experience_bar.value / experience_bar.max_value * 100 if experience_bar.max_value > 0 else 0, "%")
+	# 更新经验条
 
 	# 强制更新经验条文本
 	experience_bar.tooltip_text = str(int(experience_manager.current_experience)) + " / " + str(int(experience_manager.experience_to_level))
@@ -814,9 +810,7 @@ func add_experience(amount, source = "default"):
 	# 强制更新经验条外观
 	experience_bar.queue_redraw()
 
-	# 调试输出经验条状态
-	print("Experience bar directly updated: value = ", experience_bar.value, ", max_value = ", experience_bar.max_value, ", ratio = ",
-		experience_bar.value / experience_bar.max_value if experience_bar.max_value > 0 else 0, ", percentage = ", experience_bar.value / experience_bar.max_value * 100 if experience_bar.max_value > 0 else 0, "%")
+	# 更新经验条显示
 
 	# 强制更新经验条文本
 	experience_bar.tooltip_text = str(int(experience_manager.current_experience)) + " / " + str(int(experience_manager.experience_to_level))
@@ -856,9 +850,7 @@ func _on_experience_level_up(new_level, overflow_exp):
 	# 强制更新经验条外观
 	experience_bar.queue_redraw()
 
-	# 调试输出经验条状态
-	print("Experience bar updated after level up: value = ", experience_bar.value, ", max_value = ", experience_bar.max_value, ", ratio = ",
-		experience_bar.value / experience_bar.max_value if experience_bar.max_value > 0 else 0, ", percentage = ", experience_bar.value / experience_bar.max_value * 100 if experience_bar.max_value > 0 else 0, "%")
+	# 升级后更新经验条显示
 
 	# 强制更新经验条文本
 	experience_bar.tooltip_text = str(int(experience_manager.current_experience)) + " / " + str(int(experience_manager.experience_to_level))
@@ -904,9 +896,7 @@ func update_experience_bar():
 	# 强制更新经验条外观
 	experience_bar.queue_redraw()
 
-	# 调试输出经验条状态
-	print("Experience bar updated: value = ", experience_bar.value, ", max_value = ", experience_bar.max_value, ", ratio = ",
-		experience_bar.value / experience_bar.max_value if experience_bar.max_value > 0 else 0, ", percentage = ", experience_bar.value / experience_bar.max_value * 100 if experience_bar.max_value > 0 else 0, "%")
+	# 更新经验条显示
 
 # Level up the player (for backward compatibility and console commands)
 func level_up(from_console = false):
@@ -1270,8 +1260,7 @@ func _on_start_button_pressed():
 	# 隐藏开始界面
 	start_screen.visible = false
 
-	# 打印调试信息
-	print("Relic selection scene added to main scene")
+	# 添加遗物选择场景
 
 # Toggle pause state
 func toggle_pause():
@@ -1472,10 +1461,7 @@ func _on_player_died():
 		}
 
 		# 触发玩家死亡事件
-		print("触发玩家死亡事件，枚举值:", AbstractRelic.EventType.PLAYER_DEATH)
 		var modified_data = relic_manager.trigger_event(AbstractRelic.EventType.PLAYER_DEATH, event_data)
-
-		print("玩家死亡事件返回数据:", modified_data)
 
 		# 检查是否防止死亡
 		if modified_data.has("prevent_death") and modified_data["prevent_death"]:

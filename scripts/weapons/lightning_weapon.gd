@@ -152,14 +152,16 @@ func create_lightning_effect(start_pos, end_pos):
 
 # 获取升级选项
 func get_upgrade_options() -> Array:
+    # 使用通用翻译辅助工具
+    var Tr = load("res://scripts/language/tr.gd")
     var options = []
 
     # 伤害升级
     if level < max_level:
         options.append({
             "type": UpgradeType.DAMAGE,
-            "name": "闪电伤害 +10",
-            "description": "增加闪电伤害",
+            "name": Tr.weapon_upgrade("damage", "闪电伤害 +10"),
+            "description": Tr.weapon_upgrade_desc("damage", "增加闪电伤害"),
             "icon": "💥"
         })
 
@@ -167,8 +169,8 @@ func get_upgrade_options() -> Array:
     if level < max_level:
         options.append({
             "type": UpgradeType.ATTACK_SPEED,
-            "name": "闪电频率 +20%",
-            "description": "增加闪电攻击频率",
+            "name": Tr.weapon_upgrade("attack_speed", "闪电频率 +20%"),
+            "description": Tr.weapon_upgrade_desc("attack_speed", "增加闪电攻击频率"),
             "icon": "⚡"
         })
 
@@ -176,8 +178,8 @@ func get_upgrade_options() -> Array:
     if level < max_level:
         options.append({
             "type": UpgradeType.PROJECTILE_COUNT,
-            "name": "闪电链 +1",
-            "description": "增加闪电链接数量",
+            "name": Tr.weapon_upgrade("projectile_count", "闪电链 +1"),
+            "description": Tr.weapon_upgrade_desc("projectile_count", "增加闪电链接数量"),
             "icon": "🔗"
         })
 
@@ -185,8 +187,8 @@ func get_upgrade_options() -> Array:
     if level < max_level:
         options.append({
             "type": UpgradeType.AREA,
-            "name": "链接范围 +30",
-            "description": "增加闪电链接范围",
+            "name": Tr.weapon_upgrade("range", "链接范围 +30"),
+            "description": Tr.weapon_upgrade_desc("range", "增加闪电链接范围"),
             "icon": "📏"
         })
 

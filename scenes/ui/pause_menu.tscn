@@ -62,7 +62,7 @@ text = "成就"
 [node name="SettingsButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-text = "音频设置"
+text = "设置"
 
 [node name="HomeButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2

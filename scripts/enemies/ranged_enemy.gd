@@ -1,8 +1,11 @@
-extends "res://scripts/enemies/abstract_enemy.gd"
+extends "res://scripts/enemies/enemy.gd"
 class_name RangedEnemy
 
 func _init():
-    super._init("ranged_enemy", "远程敌人", AbstractEnemy.EnemyType.RANGED)
+    super._init()
+    enemy_id = "ranged_enemy"
+    enemy_name = "远程敌人"
+    enemy_type = EnemyType.RANGED
 
 # Ranged enemy specific properties
 var attack_cooldown = 2.0

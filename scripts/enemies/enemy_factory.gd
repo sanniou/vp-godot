@@ -4,8 +4,8 @@ class_name EnemyFactory
 # 预加载生命条类
 const HealthBarClass = preload("res://scripts/ui/health_bar.gd")
 
-# 预加载抽象敌人类
-const AbstractEnemy = preload("res://scripts/enemies/abstract_enemy.gd")
+# 预加载敌人类
+const Enemy = preload("res://scripts/enemies/enemy.gd")
 
 # 敌人类型
 enum EnemyType {
@@ -101,7 +101,7 @@ func adjust_stats_by_level(enemy, level):
 
     # 精英和Boss敌人有护盾
     if "enemy_type" in enemy and "shield" in enemy:
-        if enemy.enemy_type == AbstractEnemy.EnemyType.ELITE or enemy.enemy_type == AbstractEnemy.EnemyType.BOSS:
+        if enemy.enemy_type == Enemy.EnemyType.ELITE or enemy.enemy_type == Enemy.EnemyType.BOSS:
             enemy.shield *= level_multiplier
 
 # 创建基本敌人

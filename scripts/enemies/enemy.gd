@@ -1,99 +1,28 @@
-extends CharacterBody2D
+extends "res://scripts/enemies/abstract_enemy.gd"
 class_name Enemy
 
-# 预加载生命条类
-const HealthBarClass = preload("res://scripts/ui/health_bar.gd")
-
-signal died(position, experience)
-
-# Enemy stats
-var max_health = 30
-var current_health = max_health
-var move_speed = 100
-var damage = 10
-var experience_value = 5
-
-# Target (usually the player)
-@export var target: Node2D = null
-
-# Health bar
-@onready var health_bar = $HealthBar
+# 构造函数
+func _init():
+	super._init("enemy", "敌人", EnemyType.BASIC)
 
 func _ready():
-	# Add to enemies group
-	add_to_group("enemies")
+	# 调用父类的 _ready 方法
+	super._ready()
 
-	# Initialize health
-	current_health = max_health
-
+# 重写父类的 _physics_process 方法
 func _physics_process(delta):
-	if target == null or !is_instance_valid(target):
-		# Try to find player if target is lost
-		var players = get_tree().get_nodes_in_group("player")
-		if players.size() > 0:
-			target = players[0]
-		else:
-			return  # No target, don't move
+	# 调用父类的 _physics_process 方法
+	super._physics_process(delta)
 
-	# Move towards target
-	var direction = (target.global_position - global_position).normalized()
-	velocity = direction * move_speed
+# 重写父类的 setup_visuals 方法
+func setup_visuals():
+	# 创建敌人外观
+	var visual = ColorRect.new()
+	visual.color = Color(0.8, 0.2, 0.2, 1.0)  # 红色
+	visual.size = Vector2(40, 40)
+	visual.position = Vector2(-20, -20)
+	add_child(visual)
 
-	# Apply movement
-	move_and_slide()
-
-# Take damage
-func take_damage(amount):
-	current_health -= amount
-
-	# Update health bar
-	var health_bar = find_child("HealthBar")
-	if health_bar and health_bar is HealthBarClass:
-		# 显示受伤闪烁
-		health_bar.set_value(current_health, true)
-
-	# Flash to indicate damage
-	modulate = Color(1, 0.3, 0.3, 0.7)
-	var tween = create_tween()
-	tween.tween_property(self, "modulate", Color(1, 1, 1, 1), 0.2)
-
-	# Check for death
-	if current_health <= 0:
-		die()
-
-# Enemy death
-func die():
-	# Debug output
-	print("Enemy died at position: ", global_position, " with experience: ", experience_value)
-
-	# Apply life steal from Vampiric Fang relic
-	var main = get_tree().current_scene
-	if main and main.has_node("RelicManager"):
-		var relic_manager = main.get_node("RelicManager")
-		if relic_manager.has_method("apply_life_steal"):
-			var player = get_tree().get_nodes_in_group("player")[0] if get_tree().get_nodes_in_group("player").size() > 0 else null
-			if player:
-				relic_manager.apply_life_steal(player)
-
-	# Emit signal with position and experience value
-	died.emit(global_position, experience_value)
-
-	# Play death animation
-	var death_animation = create_tween()
-
-	# 使用 call_deferred 延迟禁用碰撞，避免在物理查询刷新时修改
-	call_deferred("set_collision_layer_value", 3, false)
-	call_deferred("set_collision_mask_value", 1, false)
-	call_deferred("set_collision_mask_value", 2, false)
-
-	# Hide health bar
-	if health_bar:
-		health_bar.visible = false
-
-	# Fade out and scale down
-	death_animation.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.5)
-	death_animation.parallel().tween_property(self, "scale", Vector2(0.1, 0.1), 0.5)
-
-	# Destroy enemy after animation
-	await death_animation.finished
-	queue_free()
+	# 调用基类的生命条设置方法
+	setup_health_bar()
+	setup_shield_bar()
