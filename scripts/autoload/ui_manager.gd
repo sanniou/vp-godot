@@ -2,6 +2,9 @@ extends Node
 
 # UI管理器 - 管理UI页面的导航
 
+# 预加载类
+const UIComponentPoolClass = preload("res://scripts/ui/ui_component_pool.gd")
+
 # 页面类型枚举
 enum PageType {
 	NONE,
@@ -11,6 +14,15 @@ enum PageType {
 	CONSOLE,
 	ACHIEVEMENTS,
 	GAME_OVER
+}
+
+# UI组件类型
+enum ComponentType {
+	TOAST,
+	TOOLTIP,
+	POPUP,
+	LOADING_INDICATOR,
+	NOTIFICATION
 }
 
 # 页面栈
@@ -28,10 +40,16 @@ var settings_entry_point = PageType.NONE
 # 主场景引用
 var main_scene = null
 
+# UI组件池
+var component_pool = null
+
 # 初始化
 func _ready():
 	# 设置进程模式，确保在暂停时也能工作
 	process_mode = Node.PROCESS_MODE_ALWAYS
+
+	# 初始化UI组件池
+	_initialize_component_pool()
 
 	# 等待主场景加载完成
 	await get_tree().process_frame
@@ -53,6 +71,20 @@ func _ready():
 
 	print("UIManager 初始化完成")
 
+# 初始化UI组件池
+func _initialize_component_pool():
+	# 创建UI组件池
+	component_pool = UIComponentPoolClass.new()
+	component_pool.name = "UIComponentPool"
+	add_child(component_pool)
+
+	# 初始化各类组件池
+	component_pool.initialize_pool("toast", "res://scenes/ui/components/toast.tscn", 5)
+	component_pool.initialize_pool("tooltip", "res://scenes/ui/components/tooltip.tscn", 5)
+	component_pool.initialize_pool("popup", "res://scenes/ui/components/popup.tscn", 3)
+	component_pool.initialize_pool("loading", "res://scenes/ui/components/loading_indicator.tscn", 2)
+	component_pool.initialize_pool("notification", "res://scenes/ui/components/notification.tscn", 5)
+
 # 初始化页面节点引用
 func _initialize_page_nodes():
 	if not main_scene:
@@ -70,8 +102,9 @@ func _initialize_page_nodes():
 
 	# 检查节点是否存在
 	for page_type in page_nodes:
-		if not page_nodes[page_type] and page_type != PageType.ACHIEVEMENTS:
-			push_warning("UIManager: 找不到页面节点: " + str(page_type))
+		# 只对必要的页面节点发出警告
+		if not page_nodes[page_type] and page_type in [PageType.START_SCREEN, PageType.GAME_OVER]:
+			push_warning("UIManager: 找不到关键页面节点: " + str(page_type))
 
 # 连接信号
 func _connect_signals():
@@ -224,24 +257,35 @@ func _show_page(page_type):
 
 	var page = page_nodes[page_type]
 
+	# 页面过渡动画参数
+	var transition_time = 0.3
+	var transition_type = Tween.TRANS_CUBIC
+	var transition_ease = Tween.EASE_OUT
+
 	# 根据页面类型执行特定操作
 	match page_type:
 		PageType.START_SCREEN:
 			page.visible = true
 			# 确保游戏未暂停
 			get_tree().paused = false
+			# 添加过渡动画
+			_add_page_transition(page, transition_time, transition_type, transition_ease)
 		PageType.PAUSE_MENU:
 			page.visible = true
 			# 如果是从暂停菜单打开的其他页面，返回时保持暂停状态
 			get_tree().paused = true
 			if page.has_method("show_menu"):
 				page.show_menu()
+			# 添加过渡动画
+			_add_page_transition(page, transition_time, transition_type, transition_ease)
 		PageType.AUDIO_SETTINGS:
 			page.visible = true
 			# 确保在最上层
 			page.z_index = 100
 			# 移到最前面
 			page.get_parent().move_child(page, page.get_parent().get_child_count() - 1)
+			# 添加过渡动画
+			_add_page_transition(page, transition_time, transition_type, transition_ease)
 			# 打印调试信息
 			print("Opening audio settings panel")
 		PageType.CONSOLE:
@@ -250,12 +294,16 @@ func _show_page(page_type):
 			page.z_index = 100
 			# 移到最前面
 			page.get_parent().move_child(page, page.get_parent().get_child_count() - 1)
+			# 添加过渡动画
+			_add_page_transition(page, transition_time, transition_type, transition_ease)
 			# 如果控制台有输入框，让它获取焦点
 			if page.has_method("_ensure_input_focus"):
 				page.call_deferred("_ensure_input_focus")
 		PageType.ACHIEVEMENTS:
 			page.visible = true
 			# 确保在最上层
+			# 添加过渡动画
+			_add_page_transition(page, transition_time, transition_type, transition_ease)
 			page.z_index = 100
 			# 移到最前面
 			if page.get_parent():
@@ -286,14 +334,43 @@ func _hide_page(page_type):
 
 	var page = page_nodes[page_type]
 
+	# 页面过渡动画参数
+	var transition_time = 0.2
+	var transition_type = Tween.TRANS_CUBIC
+	var transition_ease = Tween.EASE_IN
+
 	# 根据页面类型执行特定操作
 	match page_type:
 		PageType.PAUSE_MENU:
-			page.visible = false
+			# 添加隐藏过渡动画
+			_add_page_hide_transition(page, transition_time, transition_type, transition_ease)
 			if page.has_method("hide_menu"):
 				page.hide_menu()
 		_:
-			page.visible = false
+			# 添加隐藏过渡动画
+			_add_page_hide_transition(page, transition_time, transition_type, transition_ease)
+
+# 添加页面显示过渡动画
+func _add_page_transition(page: Control, duration: float, trans_type: int, ease_type: int):
+	# 重置页面状态
+	page.modulate.a = 0
+	page.scale = Vector2(0.95, 0.95)
+
+	# 创建过渡动画
+	var tween = create_tween()
+	tween.tween_property(page, "modulate:a", 1.0, duration).set_trans(trans_type).set_ease(ease_type)
+	tween.parallel().tween_property(page, "scale", Vector2(1.0, 1.0), duration).set_trans(trans_type).set_ease(ease_type)
+
+# 添加页面隐藏过渡动画
+func _add_page_hide_transition(page: Control, duration: float, trans_type: int, ease_type: int):
+	# 创建过渡动画
+	var tween = create_tween()
+	tween.tween_property(page, "modulate:a", 0.0, duration).set_trans(trans_type).set_ease(ease_type)
+	tween.parallel().tween_property(page, "scale", Vector2(0.95, 0.95), duration).set_trans(trans_type).set_ease(ease_type)
+
+	# 等待动画完成后隐藏页面
+	await tween.finished
+	page.visible = false
 
 # 获取当前页面类型
 func get_current_page():
@@ -328,3 +405,205 @@ func _detect_initial_page():
 func _on_gui_focus_changed(control):
 	# 可以在这里处理焦点变化，例如确保焦点在当前页面内
 	pass
+
+# UI组件相关方法
+
+# 显示提示消息
+func show_toast(message: String, duration: float = 2.0, position: Vector2 = Vector2(-1, -1)):
+	# 从池中获取提示组件
+	var toast = component_pool.get_component("toast")
+	if not toast:
+		return
+
+	# 设置消息
+	if toast.has_method("set_message"):
+		toast.set_message(message)
+
+	# 设置持续时间
+	if toast.has_method("set_duration"):
+		toast.set_duration(duration)
+
+	# 设置位置
+	if position.x >= 0 and position.y >= 0:
+		toast.position = position
+	else:
+		# 默认位置：屏幕底部中心
+		var viewport_size = get_viewport().get_visible_rect().size
+		toast.position = Vector2(viewport_size.x / 2, viewport_size.y - 100)
+
+	# 添加到场景
+	# 先检查节点是否有父节点，如果有，先移除
+	if toast.get_parent():
+		toast.get_parent().remove_child(toast)
+
+	if main_scene:
+		main_scene.get_node("UI").add_child(toast)
+	else:
+		get_tree().root.add_child(toast)
+
+	# 显示提示
+	toast.visible = true
+	if toast.has_method("show_component"):
+		toast.show_component()
+
+	# 定时返回到池中
+	await get_tree().create_timer(duration).timeout
+	if is_instance_valid(toast) and not toast.is_queued_for_deletion():
+		component_pool.return_component("toast", toast)
+
+# 显示工具提示
+func show_tooltip(text: String, position: Vector2, parent: Node = null):
+	# 从池中获取工具提示组件
+	var tooltip = component_pool.get_component("tooltip")
+	if not tooltip:
+		return
+
+	# 设置文本
+	if tooltip.has_method("set_text"):
+		tooltip.set_text(text)
+
+	# 设置位置
+	tooltip.position = position
+
+	# 添加到父节点
+	# 先检查节点是否有父节点，如果有，先移除
+	if tooltip.get_parent():
+		tooltip.get_parent().remove_child(tooltip)
+
+	if parent:
+		parent.add_child(tooltip)
+	elif main_scene:
+		main_scene.get_node("UI").add_child(tooltip)
+	else:
+		get_tree().root.add_child(tooltip)
+
+	# 显示工具提示
+	tooltip.visible = true
+	if tooltip.has_method("show_component"):
+		tooltip.show_component()
+
+	return tooltip
+
+# 隐藏工具提示
+func hide_tooltip(tooltip):
+	if is_instance_valid(tooltip) and not tooltip.is_queued_for_deletion():
+		component_pool.return_component("tooltip", tooltip)
+
+# 显示弹出窗口
+func show_popup(title: String, content: String, options: Array = [], callback = null):
+	# 从池中获取弹出窗口组件
+	var popup = component_pool.get_component("popup")
+	if not popup:
+		return
+
+	# 设置标题和内容
+	if popup.has_method("set_title"):
+		popup.set_title(title)
+	if popup.has_method("set_content"):
+		popup.set_content(content)
+
+	# 设置选项
+	if popup.has_method("set_options"):
+		popup.set_options(options)
+
+	# 设置回调
+	if callback and popup.has_method("set_callback"):
+		popup.set_callback(callback)
+
+	# 添加到场景
+	# 先检查节点是否有父节点，如果有，先移除
+	if popup.get_parent():
+		popup.get_parent().remove_child(popup)
+
+	if main_scene:
+		main_scene.get_node("UI").add_child(popup)
+	else:
+		get_tree().root.add_child(popup)
+
+	# 显示弹出窗口
+	popup.visible = true
+	if popup.has_method("show_component"):
+		popup.show_component()
+
+	return popup
+
+# 隐藏弹出窗口
+func hide_popup(popup):
+	if is_instance_valid(popup) and not popup.is_queued_for_deletion():
+		component_pool.return_component("popup", popup)
+
+# 显示加载指示器
+func show_loading(text: String = "加载中...", parent: Node = null):
+	# 从池中获取加载指示器组件
+	var loading = component_pool.get_component("loading")
+	if not loading:
+		return
+
+	# 设置文本
+	if loading.has_method("set_text"):
+		loading.set_text(text)
+
+	# 添加到父节点
+	# 先检查节点是否有父节点，如果有，先移除
+	if loading.get_parent():
+		loading.get_parent().remove_child(loading)
+
+	if parent:
+		parent.add_child(loading)
+	elif main_scene:
+		main_scene.get_node("UI").add_child(loading)
+	else:
+		get_tree().root.add_child(loading)
+
+	# 显示加载指示器
+	loading.visible = true
+	if loading.has_method("show_component"):
+		loading.show_component()
+
+	return loading
+
+# 隐藏加载指示器
+func hide_loading(loading):
+	if is_instance_valid(loading) and not loading.is_queued_for_deletion():
+		component_pool.return_component("loading", loading)
+
+# 显示通知
+func show_notification(title: String, message: String, type: String = "info", duration: float = 5.0):
+	# 从池中获取通知组件
+	var notification = component_pool.get_component("notification")
+	if not notification:
+		return
+
+	# 设置标题和消息
+	if notification.has_method("set_title"):
+		notification.set_title(title)
+	if notification.has_method("set_message"):
+		notification.set_message(message)
+
+	# 设置类型
+	if notification.has_method("set_type"):
+		notification.set_type(type)
+
+	# 设置持续时间
+	if notification.has_method("set_duration"):
+		notification.set_duration(duration)
+
+	# 添加到场景
+	# 先检查节点是否有父节点，如果有，先移除
+	if notification.get_parent():
+		notification.get_parent().remove_child(notification)
+
+	if main_scene:
+		main_scene.get_node("UI").add_child(notification)
+	else:
+		get_tree().root.add_child(notification)
+
+	# 显示通知
+	notification.visible = true
+	if notification.has_method("show_component"):
+		notification.show_component()
+
+	# 定时返回到池中
+	await get_tree().create_timer(duration).timeout
+	if is_instance_valid(notification) and not notification.is_queued_for_deletion():
+		component_pool.return_component("notification", notification)

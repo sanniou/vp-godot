@@ -1,17 +1,10 @@
-extends "res://scripts/enemies/enemy.gd"
+extends "res://scripts/enemies/abstract_enemy.gd"
 class_name BasicEnemy
 
 func _init():
-    super._init()
-    enemy_id = "basic_enemy"
-    enemy_name = "基本敌人"
+    super._init("basic_enemy", "基本敌人", EnemyType.BASIC)
 
-    # Set basic enemy stats
-    max_health = 30
-    current_health = max_health
-    move_speed = 100
-    attack_damage = 10
-    experience_value = 5
+    # 从配置中加载属性，已在父类中实现
 
 func _ready():
     # Call parent ready function

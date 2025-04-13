@@ -5,16 +5,22 @@ class_name EnemySpawner
 const EnemyFactory = preload("res://scripts/enemies/enemy_factory.gd")
 const HealthBarClass = preload("res://scripts/ui/health_bar.gd")
 
-# 敌人类型
+# 使用全局敌人类型定义
+const EnemyTypes = preload("res://scripts/enemies/enemy_types.gd")
+
+# 为了兼容性，保留EnemyType枚举
 enum EnemyType {
-    BASIC,      # 基本敌人（近战）
-    RANGED,     # 远程敌人
-    ELITE,      # 精英敌人
-    BOSS        # Boss敌人
+    BASIC = EnemyTypes.Type.BASIC,
+    RANGED = EnemyTypes.Type.RANGED,
+    ELITE = EnemyTypes.Type.ELITE,
+    BOSS = EnemyTypes.Type.BOSS
 }
 
 # 敌人生成器
 var enemy_factory = null
+
+# 特殊敌人生成信号
+signal special_enemy_spawned(enemy_type)
 
 # Load scenes in _ready to avoid preload errors
 # Spawn settings
@@ -142,6 +148,42 @@ func increase_difficulty():
 
 	# Increase max enemies as difficulty increases
 	max_enemies = min(200, max_enemies + 5)
+
+# 生成特殊敌人（精英或Boss）
+func spawn_special_enemy(special_type: String):
+	# 根据类型生成特殊敌人
+	var enemy_type = EnemyType.ELITE
+	if special_type == "boss":
+		enemy_type = EnemyType.BOSS
+
+	# 计算敌人等级，基于当前难度
+	var enemy_level = 1 + int(difficulty / 2)
+
+	# 创建敌人
+	var enemy = create_enemy(enemy_type, enemy_level)
+
+	# 检查敌人是否有效
+	if enemy == null:
+		push_error("Special enemy creation failed")
+		return null
+
+	# 设置生成位置
+	var spawn_direction = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+	var spawn_distance = spawn_radius  # 生成距离
+	var spawn_position = player.global_position + (spawn_direction * spawn_distance)
+
+	# 设置敌人属性
+	enemy.global_position = spawn_position
+
+	# 安全地设置目标
+	if "target" in enemy:
+		enemy.target = player
+
+	# 发出特殊敌人生成信号
+	special_enemy_spawned.emit(special_type)
+
+	# 返回敌人实例
+	return enemy
 
 # Signal for enemy death
 signal enemy_died(position, experience)

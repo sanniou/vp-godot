@@ -6,6 +6,7 @@ const RelicManager = preload("res://scripts/relics/relic_manager.gd")
 const SimpleAchievementSystem = preload("res://scripts/simple_achievement_system.gd")
 const ExperienceManager = preload("res://scripts/experience/experience_manager.gd")
 const ExperienceOrbManager = preload("res://scripts/experience/experience_orb_manager.gd")
+const PerformanceMonitor = preload("res://scripts/performance/performance_monitor.gd")
 
 # Game state variables
 var game_time = 0
@@ -14,6 +15,9 @@ var enemy_spawn_timer = 0
 var enemy_spawn_interval = 1.0  # Spawn enemies every second
 var difficulty_increase_timer = 0
 var difficulty_increase_interval = 60.0  # Increase difficulty every minute
+
+# 性能监控器
+var performance_monitor = null
 
 # 精英/Boss进度条变量
 var special_enemy_progress = 0.0
@@ -57,8 +61,7 @@ var achievement_manager = null
 # Relic manager
 var relic_manager = null
 
-# 预加载遗物管理器脚本
-var relic_manager_script = preload("res://scripts/relics/relic_manager.gd")
+# 遗物管理器已预加载在文件头部
 
 # Weapon manager
 var weapon_manager = null
@@ -199,8 +202,7 @@ func _ready():
 	achievement_manager.load_achievements_from_file()
 
 	# Initialize relic manager
-	relic_manager = Node.new()
-	relic_manager.set_script(load("res://scripts/relics/relic_manager.gd"))
+	relic_manager = RelicManager.new()
 	relic_manager.name = "RelicManager"
 	add_child(relic_manager)
 
@@ -219,6 +221,16 @@ func _ready():
 
 	# 初始化音频系统
 	init_audio_system()
+
+	# 初始化性能监控器
+	performance_monitor = PerformanceMonitor.new()
+	performance_monitor.name = "PerformanceMonitor"
+	add_child(performance_monitor)
+
+	# 设置性能监控器参数
+	performance_monitor.debug_mode = false  # 在生产环境中关闭调试模式
+	performance_monitor.target_fps = 60
+	performance_monitor.min_acceptable_fps = 30
 
 	# Show start screen
 	show_start_screen()
@@ -287,34 +299,15 @@ func _process(delta):
 
 # 生成特殊敌人（精英或Boss）
 func spawn_special_enemy():
-	# 根据类型生成特殊敌人
-	var enemy_type = 2  # ELITE = 2
-	if next_special_enemy_type == "boss":
-		enemy_type = 3  # BOSS = 3
+	# 使用enemy_spawner的spawn_special_enemy函数
+	var enemy = enemy_spawner.spawn_special_enemy(next_special_enemy_type)
 
-	# 计算敌人等级，基于当前难度
-	var enemy_level = 1 + int(enemy_spawner.difficulty / 2)
-
-	# 创建敌人
-	var enemy = enemy_spawner.create_enemy(enemy_type, enemy_level)
-
-	# 设置生成位置
-	var spawn_direction = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
-	var spawn_distance = 800  # 生成距离
-	var spawn_position = player.global_position + (spawn_direction * spawn_distance)
-
-	# 设置敌人属性
-	enemy.global_position = spawn_position
-
-	# 安全地设置目标
-	if "target" in enemy:
-		enemy.target = player
+	# 检查敌人是否有效
+	if enemy == null:
+		return
 
 	# 添加到场景
 	get_tree().current_scene.add_child(enemy)
-
-	# 发出特殊敌人生成信号
-	special_enemy_spawned.emit(next_special_enemy_type)
 
 	# 显示特殊敌人生成消息
 	var message = "精英敌人出现了！"
@@ -560,6 +553,20 @@ func start_game():
 	var audio_manager = get_node_or_null("/root/AudioManager")
 	if audio_manager:
 		audio_manager.play_music(AudioManager.MusicType.GAMEPLAY)
+
+	# 显示游戏开始提示
+	var ui_manager = get_node_or_null("/root/UIManager")
+	if ui_manager:
+		# 获取翻译文本
+		var game_start_message = language_manager.get_translation("game_start_message", "Game started! Good luck!")
+
+		# 显示游戏开始提示
+		ui_manager.show_toast(game_start_message, 3.0)
+
+		# 显示控制提示
+		var controls_message = language_manager.get_translation("controls_message", "Use WASD to move, mouse to aim")
+		await get_tree().create_timer(1.0).timeout
+		ui_manager.show_toast(controls_message, 3.0)
 
 	# 重置经验系统
 	experience_manager.reset()
@@ -882,6 +889,21 @@ func _on_experience_level_up(new_level, overflow_exp):
 
 	# Show level up screen
 	show_level_up_screen(false)
+
+	# 使用UI管理器显示升级提示
+	var ui_manager = get_node_or_null("/root/UIManager")
+	if ui_manager:
+		# 获取翻译文本
+		var level_up_message = language_manager.get_translation("level_up_message", "Level Up! You are now level %d")
+		level_up_message = level_up_message % new_level
+
+		# 显示升级提示
+		ui_manager.show_toast(level_up_message, 3.0)
+
+		# 播放升级音效
+		var audio_manager = get_node_or_null("/root/AudioManager")
+		if audio_manager:
+			audio_manager.play_sfx(AudioManager.SfxType.LEVEL_UP)
 
 # 更新经验条
 func update_experience_bar():
@@ -1302,6 +1324,20 @@ func handle_game_over():
 	if achievement_manager:
 		achievement_manager.save_achievements_to_file()
 
+	# 使用UI管理器显示游戏结束通知
+	var ui_manager = get_node_or_null("/root/UIManager")
+	if ui_manager:
+		# 获取翻译文本
+		var game_over_title = language_manager.get_translation("game_over_title", "Game Over")
+		var game_over_message = language_manager.get_translation("game_over_message", "You survived for %s and defeated %d enemies.")
+
+		# 格式化消息
+		var time_str = "%02d:%02d" % [int(game_time / 60), int(game_time) % 60]
+		game_over_message = game_over_message % [time_str, enemies_defeated]
+
+		# 显示游戏结束通知
+		ui_manager.show_notification(game_over_title, game_over_message, "error", 10.0)
+
 	# Update game over stats
 	# 使用多语言系统获取翻译文本
 	var time_survived_text = language_manager.get_translation("time_survived", "Time Survived")
@@ -1504,35 +1540,47 @@ func spawn_enemy_wave(count, enemy_type):
 
 # Show difficulty increase message
 func show_difficulty_message(message):
-	# Create message label
-	var label = Label.new()
-	label.text = message
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.theme_override_font_sizes = {"font_size": 24}
-	label.theme_override_colors = {"font_color": Color(1, 0.5, 0, 1)}
-	label.theme_override_constants = {"shadow_offset_x": 2, "shadow_offset_y": 2}
-	label.theme_override_colors = {"font_shadow_color": Color(0, 0, 0, 0.5)}
+	# 使用UI管理器显示通知
+	var ui_manager = get_node_or_null("/root/UIManager")
+	if ui_manager:
+		# 使用通知组件显示难度增加消息
+		ui_manager.show_notification(
+			language_manager.get_translation("difficulty_increased", "Difficulty Increased"),
+			message,
+			"warning",
+			5.0
+		)
+	else:
+		# 如果UI管理器不可用，使用旧方法
+		# Create message label
+		var label = Label.new()
+		label.text = message
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.theme_override_font_sizes = {"font_size": 24}
+		label.theme_override_colors = {"font_color": Color(1, 0.5, 0, 1)}
+		label.theme_override_constants = {"shadow_offset_x": 2, "shadow_offset_y": 2}
+		label.theme_override_colors = {"font_shadow_color": Color(0, 0, 0, 0.5)}
 
-	# Position in center of screen
-	label.anchors_preset = Control.PRESET_CENTER
-	label.anchor_left = 0.5
-	label.anchor_top = 0.3
-	label.anchor_right = 0.5
-	label.anchor_bottom = 0.3
-	label.offset_left = -200
-	label.offset_top = -50
-	label.offset_right = 200
-	label.offset_bottom = 50
+		# Position in center of screen
+		label.anchors_preset = Control.PRESET_CENTER
+		label.anchor_left = 0.5
+		label.anchor_top = 0.3
+		label.anchor_right = 0.5
+		label.anchor_bottom = 0.3
+		label.offset_left = -200
+		label.offset_top = -50
+		label.offset_right = 200
+		label.offset_bottom = 50
 
-	# Add to UI
-	$UI.add_child(label)
+		# Add to UI
+		$UI.add_child(label)
 
-	# Animate and remove after delay
-	var tween = create_tween()
-	tween.tween_property(label, "modulate:a", 0, 2.0).set_delay(3.0)
-	await tween.finished
-	label.queue_free()
+		# Animate and remove after delay
+		var tween = create_tween()
+		tween.tween_property(label, "modulate:a", 0, 2.0).set_delay(3.0)
+		await tween.finished
+		label.queue_free()
 
 # Load selected relics from global
 func load_selected_relics():
@@ -1694,6 +1742,21 @@ func _on_enemy_died(position, experience):
 
 	# Spawn experience orb
 	spawn_experience_orb(position, experience)
+
+	# 使用UI组件池显示得分
+	var ui_manager = get_node_or_null("/root/UIManager")
+	if ui_manager:
+		# 创建得分消息
+		var score_message = "+" + str(experience) + " XP"
+
+		# 在敌人死亡位置显示得分
+		# 将世界坐标转换为屏幕坐标
+		var camera = get_viewport().get_camera_2d()
+		# 在 Godot 4.4.1 中，使用乘法运算符而不是 xform 方法
+		var screen_position = get_viewport().get_canvas_transform() * position
+
+		# 显示得分消息
+		ui_manager.show_toast(score_message, 1.0, screen_position)
 
 # 处理游戏退出时的资源释放
 func _notification(what):

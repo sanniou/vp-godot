@@ -20,8 +20,8 @@ var main_scene_instance = null
 
 func _ready():
 	# 初始化遗物管理器
-	relic_manager = Node.new()
-	relic_manager.set_script(load("res://scripts/relics/relic_manager.gd"))
+	var RelicManager = load("res://scripts/relics/relic_manager.gd")
+	relic_manager = RelicManager.new()
 	add_child(relic_manager)
 
 	# 获取语言管理器

@@ -1,11 +1,8 @@
-extends "res://scripts/enemies/enemy.gd"
+extends "res://scripts/enemies/abstract_enemy.gd"
 class_name EliteEnemy
 
 func _init():
-    super._init()
-    enemy_id = "elite_enemy"
-    enemy_name = "精英敌人"
-    enemy_type = EnemyType.ELITE
+    super._init("elite_enemy", "精英敌人", EnemyType.ELITE)
 
 # 重写视觉效果设置
 func setup_visuals():

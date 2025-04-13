@@ -119,6 +119,17 @@
     "weapon_upgrade_special": "特殊效果",
     "weapon_upgrade_special_desc": "增强武器的特殊效果",
 
+    "weapon_upgrade_knife_damage": "小刀伤害 +50%",
+    "weapon_upgrade_knife_attack_speed": "小刀攻击速度 +30%",
+    "weapon_upgrade_knife_range": "小刀范围 +30%",
+    "weapon_upgrade_knife_special": "小刀特殊效果",
+
+    "weapon_upgrade_gun_damage": "手枪伤害 +50%",
+    "weapon_upgrade_gun_attack_speed": "手枪攻击速度 +30%",
+    "weapon_upgrade_gun_range": "手枪范围 +30%",
+    "weapon_upgrade_gun_projectile_count": "手枪弹幕数量 +1",
+    "weapon_upgrade_gun_special": "手枪特殊效果",
+
     "player_upgrade_max_health": "最大生命值 +{0}",
     "player_upgrade_max_health_desc": "增加最大生命值 {0} 点",
     "player_upgrade_move_speed": "移动速度 +{0}",
@@ -130,6 +141,19 @@
     "enemy_ranged_name": "远程敌人",
     "enemy_elite_name": "精英敌人",
     "enemy_boss_name": "Boss敌人",
+
+    "weapon_knife_name": "小刀",
+    "weapon_knife_desc": "一把锐利的小刀，可以快速攻击敌人。",
+    "weapon_gun_name": "手枪",
+    "weapon_gun_desc": "一把简单的手枪，可以远程攻击敌人。",
+    "weapon_sword_name": "剑",
+    "weapon_sword_desc": "一把强力的剑，可以造成大量伤害。",
+    "weapon_axe_name": "斧头",
+    "weapon_axe_desc": "一把沉重的斧头，可以造成大量伤害但攻击速度较慢。",
+    "weapon_bow_name": "弓",
+    "weapon_bow_desc": "一把长距离武器，可以从远处攻击敌人。",
+    "weapon_staff_name": "法杖",
+    "weapon_staff_desc": "一把魔法杖，可以发射魔法弹幕。",
 
     "effect_dodge": "闪避!",
     "effect_resurrect": "复活!",

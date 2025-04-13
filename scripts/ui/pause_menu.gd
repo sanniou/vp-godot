@@ -2,6 +2,9 @@ extends Control
 
 # 暂停菜单
 
+# 预加载按钮效果脚本
+const ButtonEffects = preload("res://scripts/ui/button_effects.gd")
+
 signal resume_game
 signal quit_game
 signal show_settings
@@ -12,12 +15,15 @@ signal return_to_home
 # 初始化
 func _ready():
 	# 连接按钮信号
-	$VBoxContainer/ResumeButton.pressed.connect(_on_resume_button_pressed)
-	$VBoxContainer/ConsoleButton.pressed.connect(_on_console_button_pressed)
-	$VBoxContainer/AchievementsButton.pressed.connect(_on_achievements_button_pressed)
-	$VBoxContainer/SettingsButton.pressed.connect(_on_settings_button_pressed)
-	$VBoxContainer/HomeButton.pressed.connect(_on_home_button_pressed)
-	$VBoxContainer/QuitButton.pressed.connect(_on_quit_button_pressed)
+	$Panel/VBoxContainer/ButtonsContainer/ResumeButton.pressed.connect(_on_resume_button_pressed)
+	$Panel/VBoxContainer/ButtonsContainer/ConsoleButton.pressed.connect(_on_console_button_pressed)
+	$Panel/VBoxContainer/ButtonsContainer/AchievementsButton.pressed.connect(_on_achievements_button_pressed)
+	$Panel/VBoxContainer/ButtonsContainer/SettingsButton.pressed.connect(_on_settings_button_pressed)
+	$Panel/VBoxContainer/HomeButton.pressed.connect(_on_home_button_pressed)
+	$Panel/VBoxContainer/QuitButton.pressed.connect(_on_quit_button_pressed)
+
+	# 为所有按钮添加悬停效果
+	ButtonEffects.add_hover_effects_to_container($Panel/VBoxContainer)
 
 	# 初始隐藏
 	hide()

@@ -56,16 +56,19 @@ static func get_config(enemy_id: String) -> Dictionary:
         return ENEMY_CONFIGS[enemy_id]
     return {}
 
+# 使用全局敌人类型定义
+const EnemyTypes = preload("res://scripts/enemies/enemy_types.gd")
+
 # 根据敌人类型获取配置
 static func get_config_by_type(enemy_type: int) -> Dictionary:
     match enemy_type:
-        AbstractEnemy.EnemyType.BASIC:
+        EnemyTypes.Type.BASIC:
             return get_config("basic")
-        AbstractEnemy.EnemyType.RANGED:
+        EnemyTypes.Type.RANGED:
             return get_config("ranged")
-        AbstractEnemy.EnemyType.ELITE:
+        EnemyTypes.Type.ELITE:
             return get_config("elite")
-        AbstractEnemy.EnemyType.BOSS:
+        EnemyTypes.Type.BOSS:
             return get_config("boss")
         _:
             return {}

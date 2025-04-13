@@ -1,0 +1,64 @@
+[gd_scene load_steps=3 format=3 uid="uid://c8kqfxw5gvwqj"]
+
+[ext_resource type="Script" path="res://scripts/ui/components/notification.gd" id="1_notification"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
+bg_color = Color(0.15, 0.15, 0.15, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.3, 0.3, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="Notification" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_notification")
+
+[node name="Panel" type="PanelContainer" parent="."]
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 80.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_1")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel"]
+layout_mode = 2
+
+[node name="TypeIcon" type="ColorRect" parent="Panel"]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+color = Color(0.2, 0.6, 1, 1)
+
+[node name="TitleLabel" type="Label" parent="Panel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "通知标题"
+vertical_alignment = 1
+
+[node name="CloseButton" type="Button" parent="Panel"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+text = "X"
+
+[node name="MessageLabel" type="Label" parent="Panel"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 14
+text = "通知消息内容"
+autowrap_mode = 3

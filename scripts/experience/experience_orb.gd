@@ -20,23 +20,22 @@ var can_be_merged = false
 
 # 初始化
 func _ready():
-	# 连接信号
-	body_entered.connect(_on_body_entered)
-	$AttractTimer.timeout.connect(_on_attract_timer_timeout)
+	# 连接信号（只在第一次连接）
+	if not body_entered.is_connected(_on_body_entered):
+		body_entered.connect(_on_body_entered)
+
+	if not $AttractTimer.timeout.is_connected(_on_attract_timer_timeout):
+		$AttractTimer.timeout.connect(_on_attract_timer_timeout)
 
 	# 初始状态
 	monitoring = false
 	monitorable = false
 
-	# 创建定时器在一段时间后启用碰撞
-	var timer = get_tree().create_timer(0.5)
-	timer.timeout.connect(func(): call_deferred("_enable_collision"))
+	# 注意：不在这里创建定时器和播放生成动画
+	# 这些操作将由经验球管理器在生成经验球时处理
 
 	# 设置初始视觉效果
 	_update_visual()
-
-	# 添加出生动画
-	_play_spawn_animation()
 
 # 启用碰撞检测
 func _enable_collision():
@@ -217,9 +216,7 @@ func _on_body_entered(body):
 		monitorable = false
 		can_be_collected = false
 
-		# 延迟销毁，等待动画完成
-		await get_tree().create_timer(0.3).timeout
-		queue_free()
+		# 注意：不再销毁经验球，而是由经验球管理器将其返回到池中
 
 # 播放收集动画
 func _play_collect_animation():

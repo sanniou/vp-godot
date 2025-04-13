@@ -1,7 +1,5 @@
 extends "res://scripts/enemies/abstract_enemy.gd"
-
-# 预加载生命条类
-const HealthBarClass = preload("res://scripts/ui/health_bar.gd")
+class_name BossEnemy
 
 var phase = 1  # 当前阶段
 var max_phases = 3  # 最大阶段数
@@ -13,6 +11,12 @@ var current_attack_system = null  # 当前使用的攻击系统
 
 func _init():
     super._init("boss_enemy", "Boss敌人", EnemyType.BOSS)
+
+    # 设置护盾
+    shield = max_health * 0.4  # 护盾值为最大生命值的40%
+
+    # 设置攻击范围
+    attack_range = 100
 
 # 重写初始化
 func _ready():
@@ -85,9 +89,7 @@ func update_shield(delta):
     super.update_shield(delta)
 
     # 更新护盾条
-    var shield_bar = find_child("ShieldBar")
-    if shield_bar:
-        shield_bar.value = shield
+    update_shield_bar()
 
 # 重写受到伤害
 func take_damage(amount, damage_type = "physical"):

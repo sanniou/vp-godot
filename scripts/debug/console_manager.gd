@@ -38,6 +38,13 @@ func _ready():
 	register_command("set_difficulty", func(args): return set_difficulty(args), "设置难度，用法: set_difficulty [level]")
 	register_command("exp_debug", func(args): return toggle_exp_debug(), "切换经验系统调试面板")
 	register_command("collect_orbs", func(args): return collect_all_orbs(), "收集所有经验球")
+	register_command("ui_test", func(args): return open_ui_test(), "打开UI测试场景")
+	register_command("pool_stats", func(args): return show_pool_stats(), "显示对象池统计信息")
+	register_command("perf", func(args): return show_performance_report(), "显示性能报告")
+
+	# 注册翻译命令
+	var TranslationCommands = load("res://scripts/console/translation_commands.gd")
+	TranslationCommands.register_commands(self)
 
 # 注册命令
 func register_command(name, callback, description = ""):
@@ -355,3 +362,85 @@ func collect_all_orbs():
 
 	var count = orb_manager.collect_all_orbs()
 	return "已收集 " + str(count) + " 个经验球"
+
+# 打开UI测试场景
+func open_ui_test():
+	# 隐藏控制台
+	var console_panel = get_tree().get_root().get_node_or_null("Main/UI/ConsolePanel")
+	if console_panel and console_panel.visible:
+		console_panel.visible = false
+
+	# 切换到UI测试场景
+	get_tree().change_scene_to_file("res://scenes/ui/ui_test_scene.tscn")
+
+	return "正在打开UI测试场景..."
+
+# 显示对象池统计信息
+func show_pool_stats():
+	var main = get_tree().get_root().get_node_or_null("Main")
+	if not main:
+		return "无法找到主场景"
+
+	var report = "对象池统计信息:\n"
+
+	# 经验球池统计
+	var orb_manager = main.get_node_or_null("ExperienceOrbManager")
+	if orb_manager:
+		var stats = orb_manager.get_debug_info()
+		report += "\n经验球池:\n"
+		report += "  总经验球数量: " + str(stats.pool_size) + "\n"
+		report += "  活跃经验球数量: " + str(stats.active_orbs_count) + "\n"
+		report += "  历史峰值: " + str(stats.pool_stats.active_peak) + "\n"
+		report += "  创建的经验球总数: " + str(stats.pool_stats.created) + "\n"
+		report += "  重用的经验球数量: " + str(stats.pool_stats.reused) + "\n"
+		report += "  重用率: " + str(stats.memory_usage.reuse_ratio).pad_decimals(2) + "%\n"
+		report += "  强制合并次数: " + str(stats.pool_stats.forced_merges) + "\n"
+	else:
+		report += "\n经验球池: 未找到\n"
+
+	# UI组件池统计
+	var ui_manager = get_node_or_null("/root/UIManager")
+	if ui_manager and ui_manager.component_pool:
+		var pool_info = ui_manager.component_pool.get_pools_info()
+		report += "\nUI组件池:\n"
+
+		for type in pool_info.keys():
+			report += "  " + type + ": " + str(pool_info[type].size) + " 个组件\n"
+	else:
+		report += "\nUI组件池: 未找到\n"
+
+	return report
+
+# 显示性能报告
+func show_performance_report():
+	var main = get_tree().get_root().get_node_or_null("Main")
+	if not main:
+		return "无法找到主场景"
+
+	# 获取性能监控器
+	var performance_monitor = main.get_node_or_null("PerformanceMonitor")
+	if performance_monitor:
+		return performance_monitor.get_performance_report()
+	else:
+		# 如果没有性能监控器，生成简单的性能报告
+		var report = "性能报告:\n"
+		report += "FPS: " + str(Engine.get_frames_per_second()) + "\n"
+
+		# 获取敌人数量
+		var enemies = get_tree().get_nodes_in_group("enemies")
+		report += "敌人数量: " + str(enemies.size()) + "\n"
+
+		# 获取内存使用情况
+		var memory_static = Performance.get_monitor(Performance.MEMORY_STATIC)
+		# 注意：Godot 4.4.1 中不再使用 MEMORY_DYNAMIC
+		# 改用总内存和静态内存的差值作为动态内存的估计值
+		var total_memory = OS.get_static_memory_usage()
+		var memory_dynamic = total_memory - memory_static
+		report += "静态内存: " + str(memory_static / 1024 / 1024).pad_decimals(2) + " MB\n"
+		report += "动态内存: " + str(memory_dynamic / 1024 / 1024).pad_decimals(2) + " MB\n"
+
+		# 获取对象数量
+		var object_count = Performance.get_monitor(Performance.OBJECT_COUNT)
+		report += "对象数量: " + str(object_count) + "\n"
+
+		return report

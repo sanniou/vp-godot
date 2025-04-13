@@ -89,11 +89,36 @@ func add_weapon(weapon_id: String):
     # 发出信号
     weapon_added.emit(weapon_id)
 
-    # 安全地输出武器信息
+    # 获取武器名称
     var weapon_name = weapon_id
     if "weapon_name" in weapon_instance:
         weapon_name = weapon_instance.weapon_name
-    # print("已添加武器: ", weapon_id, " - ", weapon_name)
+
+    # 使用UI管理器显示武器获取消息
+    var ui_manager = get_node_or_null("/root/UIManager")
+    if ui_manager:
+        # 获取语言管理器
+        var language_manager = get_node_or_null("/root/LanguageManager")
+        if not language_manager:
+            # 如果找不到语言管理器，尝试从自动加载脚本获取
+            var autoload = get_node_or_null("/root/LanguageAutoload")
+            if autoload and autoload.language_manager:
+                language_manager = autoload.language_manager
+
+        # 获取武器翻译名称
+        var translated_name = weapon_name
+        if language_manager:
+            var trans_key = "weapon_" + weapon_id + "_name"
+            var trans_result = language_manager.get_translation(trans_key, "")
+            if not trans_result.is_empty():
+                translated_name = trans_result
+
+        # 显示武器获取通知
+        var title = language_manager.get_translation("weapon_acquired", "Weapon Acquired")
+        var message = language_manager.get_translation("weapon_acquired_message", "You acquired %s!")
+        message = message % translated_name
+
+        ui_manager.show_notification(title, message, "success", 3.0)
 
     return weapon_instance
 
@@ -184,6 +209,50 @@ func upgrade_weapon(weapon_id: String, upgrade_type) -> bool:
     else:
         print("Weapon does not have upgrade methods: ", weapon_id)
         return false
+
+    # 使用UI管理器显示武器升级消息
+    var ui_manager = get_node_or_null("/root/UIManager")
+    if ui_manager:
+        # 获取语言管理器
+        var language_manager = get_node_or_null("/root/LanguageManager")
+        if not language_manager:
+            # 如果找不到语言管理器，尝试从自动加载脚本获取
+            var autoload = get_node_or_null("/root/LanguageAutoload")
+            if autoload and autoload.language_manager:
+                language_manager = autoload.language_manager
+
+        # 获取武器翻译名称
+        var weapon_name = weapon_id
+        if "weapon_name" in weapon:
+            weapon_name = weapon.weapon_name
+
+        var translated_name = weapon_name
+        if language_manager:
+            var trans_key = "weapon_" + weapon_id + "_name"
+            var trans_result = language_manager.get_translation(trans_key, "")
+            if not trans_result.is_empty():
+                translated_name = trans_result
+
+        # 获取升级类型名称
+        var upgrade_name = ""
+        match upgrade_type:
+            0: # 伤害
+                upgrade_name = language_manager.get_translation("weapon_upgrade_damage", "Damage")
+            1: # 攻击速度
+                upgrade_name = language_manager.get_translation("weapon_upgrade_attack_speed", "Attack Speed")
+            2: # 范围
+                upgrade_name = language_manager.get_translation("weapon_upgrade_range", "Range")
+            3: # 子弹数量
+                upgrade_name = language_manager.get_translation("weapon_upgrade_projectile_count", "Projectile Count")
+            _:
+                upgrade_name = language_manager.get_translation("weapon_upgrade_generic", "Upgrade")
+
+        # 显示武器升级通知
+        var title = language_manager.get_translation("weapon_upgraded", "Weapon Upgraded")
+        var message = language_manager.get_translation("weapon_upgraded_message", "%s %s improved!")
+        message = message % [translated_name, upgrade_name]
+
+        ui_manager.show_toast(message, 3.0)
 
     return true
 

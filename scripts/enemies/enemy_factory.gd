@@ -1,18 +1,17 @@
 extends Node
 class_name EnemyFactory
 
-# 预加载生命条类
+# 预加载类
 const HealthBarClass = preload("res://scripts/ui/health_bar.gd")
+const AbstractEnemy = preload("res://scripts/enemies/abstract_enemy.gd")
+const EnemyTypes = preload("res://scripts/enemies/enemy_types.gd")
 
-# 预加载敌人类
-const Enemy = preload("res://scripts/enemies/enemy.gd")
-
-# 敌人类型
+# 敌人类型枚举
 enum EnemyType {
-    BASIC,      # 基本敌人（近战）
-    RANGED,     # 远程敌人
-    ELITE,      # 精英敌人
-    BOSS        # Boss敌人
+    BASIC = EnemyTypes.Type.BASIC,
+    RANGED = EnemyTypes.Type.RANGED,
+    ELITE = EnemyTypes.Type.ELITE,
+    BOSS = EnemyTypes.Type.BOSS
 }
 
 # 敌人场景路径
@@ -20,16 +19,10 @@ var enemy_scene_paths = {
     EnemyType.BASIC: "res://scenes/enemies/basic_enemy.tscn",
     EnemyType.RANGED: "res://scenes/enemies/ranged_enemy.tscn",
     EnemyType.ELITE: "res://scenes/enemies/strong_enemy.tscn",
-    EnemyType.BOSS: "res://scenes/enemies/strong_enemy.tscn"  # 暂时使用strong_enemy作为Boss
+    EnemyType.BOSS: "res://scenes/enemies/boss_enemy.tscn"  # 使用专门的Boss敌人场景
 }
 
-# 敌人脚本路径 (保留以便兼容旧代码)
-var enemy_script_paths = {
-    EnemyType.BASIC: "res://scripts/enemies/basic_enemy.gd",
-    EnemyType.RANGED: "res://scripts/enemies/ranged_enemy.gd",
-    EnemyType.ELITE: "res://scripts/enemies/elite_enemy.gd",
-    EnemyType.BOSS: "res://scripts/enemies/boss_enemy.gd"
-}
+
 
 # 创建敌人
 func create_enemy(type: int, level: int = 1):
@@ -52,17 +45,7 @@ func create_enemy(type: int, level: int = 1):
         return null
 
     # 手动初始化敌人
-    enemy.add_to_group("enemies")
-
-    # 如果这些方法存在，才调用它们
-    if enemy.has_method("setup_collision"):
-        enemy.setup_collision()
-    if enemy.has_method("setup_visuals"):
-        enemy.setup_visuals()
-    if enemy.has_method("setup_attack_system"):
-        enemy.setup_attack_system()
-    if enemy.has_method("setup_skills"):
-        enemy.setup_skills()
+    # 注意：不需要手动添加到enemies组，因为AbstractEnemy的_ready方法会处理这个
 
     # 安全地设置等级
     if enemy.get("level") != null:
@@ -101,7 +84,7 @@ func adjust_stats_by_level(enemy, level):
 
     # 精英和Boss敌人有护盾
     if "enemy_type" in enemy and "shield" in enemy:
-        if enemy.enemy_type == Enemy.EnemyType.ELITE or enemy.enemy_type == Enemy.EnemyType.BOSS:
+        if enemy.enemy_type == AbstractEnemy.EnemyType.ELITE or enemy.enemy_type == AbstractEnemy.EnemyType.BOSS:
             enemy.shield *= level_multiplier
 
 # 创建基本敌人

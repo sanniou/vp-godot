@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8yvxg1yvqnrw"]
+
+[ext_resource type="Script" path="res://scripts/enemies/boss_enemy.gd" id="1_yvqnr"]
+
+[node name="BossEnemy" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_yvqnr")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+
+[node name="HealthBar" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0

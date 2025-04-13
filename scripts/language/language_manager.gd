@@ -10,17 +10,21 @@ var current_language: String = "zh_CN"  # 默认语言为简体中文
 # 支持的语言列表
 var supported_languages: Dictionary = {
     "zh_CN": "简体中文",
-    "en_US": "English",
-    "ja_JP": "日本語",
-    "ko_KR": "한국어",
-    "ru_RU": "Русский",
-    "es_ES": "Español",
-    "fr_FR": "Français",
-    "de_DE": "Deutsch"
+    "en_US": "English"
 }
 
 # 翻译数据
 var translations: Dictionary = {}
+
+# 翻译缓存
+var translation_cache: Dictionary = {}
+
+# 回退语言
+var fallback_language: String = "en_US"  # 默认回退语言为英语
+
+# 缓存设置
+var cache_enabled: bool = true  # 是否启用缓存
+var cache_size_limit: int = 1000  # 缓存项数量限制
 
 # 初始化
 func _ready():
@@ -66,6 +70,10 @@ func load_language(language_code: String) -> bool:
         # print("语言文件格式错误: 不是有效的字典")
         return false
 
+    # 清空缓存
+    if cache_enabled:
+        translation_cache.clear()
+
     # 更新翻译数据
     translations = data
 
@@ -84,13 +92,80 @@ func switch_language(language_code: String) -> bool:
 
 # 获取翻译
 func get_translation(key: String, default: String = "") -> String:
+    # 检查缓存
+    if cache_enabled and translation_cache.has(key):
+        return translation_cache[key]
+
+    # 从当前语言中查找
     if translations.has(key):
-        return translations[key]
+        var translation = translations[key]
+
+        # 添加到缓存
+        if cache_enabled:
+            _add_to_cache(key, translation)
+
+        return translation
+
+    # 如果当前语言中没有找到，尝试从回退语言中查找
+    if current_language != fallback_language:
+        var fallback_translation = _get_fallback_translation(key)
+        if not fallback_translation.is_empty():
+            # 添加到缓存
+            if cache_enabled:
+                _add_to_cache(key, fallback_translation)
+
+            return fallback_translation
 
     # 如果找不到翻译，返回默认值或键名
-    if default.is_empty():
-        return key
-    return default
+    var result = default if not default.is_empty() else key
+
+    # 添加到缓存
+    if cache_enabled:
+        _add_to_cache(key, result)
+
+    return result
+
+# 从回退语言中获取翻译
+func _get_fallback_translation(key: String) -> String:
+    # 尝试加载回退语言文件
+    var file_path = "res://languages/" + fallback_language + ".json"
+    var file = FileAccess.open(file_path, FileAccess.READ)
+
+    if file == null:
+        return ""
+
+    # 读取文件内容
+    var json_text = file.get_as_text()
+    file.close()
+
+    # 解析JSON
+    var json = JSON.new()
+    var error = json.parse(json_text)
+
+    if error != OK:
+        return ""
+
+    # 获取翻译数据
+    var data = json.get_data()
+
+    if typeof(data) != TYPE_DICTIONARY:
+        return ""
+
+    # 查找翻译
+    if data.has(key):
+        return data[key]
+
+    return ""
+
+# 添加到缓存
+func _add_to_cache(key: String, value: String) -> void:
+    # 检查缓存大小
+    if translation_cache.size() >= cache_size_limit:
+        # 简单的缓存清理策略：清空缓存
+        translation_cache.clear()
+
+    # 添加到缓存
+    translation_cache[key] = value
 
 # 获取当前语言名称
 func get_current_language_name() -> String:

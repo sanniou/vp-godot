@@ -1,8 +1,11 @@
 extends CharacterBody2D
 class_name AbstractEnemy
 
-# 预加载生命条类
+# 预加载类
 const HealthBarClass = preload("res://scripts/ui/health_bar.gd")
+const EnemyTypes = preload("res://scripts/enemies/enemy_types.gd")
+const EnemyConfigClass = preload("res://scripts/enemies/enemy_config.gd")
+const EnemyStateMachineClass = preload("res://scripts/enemies/enemy_state_machine.gd")
 
 # 信号
 signal died(position, experience)
@@ -10,10 +13,10 @@ signal damaged(amount)
 
 # 敌人类型枚举
 enum EnemyType {
-    BASIC,      # 基本敌人（近战）
-    RANGED,     # 远程敌人
-    ELITE,      # 精英敌人
-    BOSS        # Boss敌人
+    BASIC = EnemyTypes.Type.BASIC,
+    RANGED = EnemyTypes.Type.RANGED,
+    ELITE = EnemyTypes.Type.ELITE,
+    BOSS = EnemyTypes.Type.BOSS
 }
 
 # 基本属性
@@ -53,7 +56,8 @@ var skills = []  # 技能列表
 var active_skill = null  # 当前激活的技能
 
 # 内部状态
-var is_stunned: bool = false
+var is_dead: bool = false     # 是否已死亡
+var is_stunned: bool = false  # 是否眼晕
 var stun_timer: float = 0.0
 var is_slowed: bool = false
 var slow_factor: float = 1.0
@@ -72,12 +76,6 @@ var last_collision_time: int = 0  # 上次碰撞时间
 # 攻击系统
 var attack_system = null
 
-# 预加载敌人配置
-const EnemyConfigClass = preload("res://scripts/enemies/enemy_config.gd")
-
-# 预加载敌人状态机
-const EnemyStateMachineClass = preload("res://scripts/enemies/enemy_state_machine.gd")
-
 # 敌人状态机
 var state_machine = null
 
@@ -94,17 +92,8 @@ func _init(id: String, name: String, type: int = EnemyType.BASIC):
     enemy_type = type
 
     # 从配置文件加载敌人属性
-    var config = {}
-
-    match type:
-        EnemyType.BASIC:
-            config = EnemyConfigClass.get_config("basic")
-        EnemyType.RANGED:
-            config = EnemyConfigClass.get_config("ranged")
-        EnemyType.ELITE:
-            config = EnemyConfigClass.get_config("elite")
-        EnemyType.BOSS:
-            config = EnemyConfigClass.get_config("boss")
+    # 使用配置类的get_config_by_type函数获取配置
+    var config = EnemyConfigClass.get_config_by_type(type)
 
     # 设置属性
     max_health = config.get("max_health", 100.0)
@@ -140,15 +129,7 @@ func _ready():
     # 初始化状态机
     state_machine = EnemyStateMachineClass.new(self)
 
-    # 调试输出
-    # print("Enemy created: ", enemy_name, ", health: ", current_health, "/", max_health)
 
-    # 检查生命条
-    var health_bar = find_child("HealthBar")
-    # if health_bar:
-    #     print("Health bar found: max_value = ", health_bar.max_value, ", value = ", health_bar.value)
-    # else:
-    #     print("Health bar not found!")
 
 # 设置碰撞
 func setup_collision():
@@ -165,18 +146,8 @@ func setup_collision():
 
 # 设置视觉效果
 func setup_visuals():
-    # 从配置加载视觉效果参数
-    var config = {}
-
-    match enemy_type:
-        EnemyType.BASIC:
-            config = EnemyConfigClass.get_config("basic")
-        EnemyType.RANGED:
-            config = EnemyConfigClass.get_config("ranged")
-        EnemyType.ELITE:
-            config = EnemyConfigClass.get_config("elite")
-        EnemyType.BOSS:
-            config = EnemyConfigClass.get_config("boss")
+    # 使用配置类的get_config_by_type函数获取配置
+    var config = EnemyConfigClass.get_config_by_type(enemy_type)
 
     # 创建敌人外观
     var visual = ColorRect.new()
@@ -194,10 +165,25 @@ func setup_visuals():
 
 # 设置攻击系统
 func setup_attack_system():
-    # 子类可以重写此方法设置特定的攻击系统
-    attack_system = load("res://scripts/enemies/attacks/melee_attack.gd").new()
-    attack_system.setup(self, attack_damage, attack_range)
-    add_child(attack_system)
+    # 根据敌人类型选择不同的攻击系统
+    var attack_script_path = "res://scripts/enemies/attacks/melee_attack.gd"  # 默认近战攻击
+
+    match enemy_type:
+        EnemyType.RANGED:
+            attack_script_path = "res://scripts/enemies/attacks/ranged_attack.gd"
+        EnemyType.ELITE:
+            attack_script_path = "res://scripts/enemies/attacks/area_attack.gd"
+        EnemyType.BOSS:
+            attack_script_path = "res://scripts/enemies/attacks/special_attack.gd"
+
+    # 加载并创建攻击系统
+    var attack_script = load(attack_script_path)
+    if attack_script:
+        attack_system = attack_script.new()
+        attack_system.setup(self, attack_damage, attack_range)
+        add_child(attack_system)
+    else:
+        push_error("Failed to load attack system: " + attack_script_path)
 
 # 设置技能
 func setup_skills():
@@ -246,8 +232,7 @@ func _physics_process(delta):
         knockback_timer -= delta
         if knockback_timer <= 0:
             is_knocked_back = false
-            # 打印击退结束信息
-            print("Knockback ended for enemy: ", enemy_name)
+
             # 重置速度
             velocity = Vector2.ZERO
 
@@ -331,19 +316,14 @@ func update_status_timers(delta):
 
 # 设置血条
 func setup_health_bar():
-    # 获取血条大小和位置
-    var health_bar_width = 40
-    var health_bar_height = 1
-    var health_bar_position_y = -30
+    # 从配置中获取敌人大小
+    var config = EnemyConfigClass.get_config_by_type(enemy_type)
+    var enemy_size = config.get("size", Vector2(40, 40))
 
-    # 根据敌人类型调整血条大小和位置
-    match enemy_type:
-        EnemyType.ELITE:
-            health_bar_width = 50
-            health_bar_position_y = -35
-        EnemyType.BOSS:
-            health_bar_width = 80
-            health_bar_position_y = -50
+    # 设置血条大小和位置
+    var health_bar_width = enemy_size.x
+    var health_bar_height = 1
+    var health_bar_position_y = -enemy_size.y / 2 - 10  # 在敌人上方显示
 
     # 检查是否已经存在血条
     var existing_health_bar = find_child("HealthBar")
@@ -421,17 +401,13 @@ func setup_shield_bar():
         var shield_bar = Control.new()
         shield_bar.name = "ShieldBar"
 
-        # 根据敌人类型调整护盾条大小和位置
-        var shield_width = 40
-        var shield_position_y = -35
+        # 从配置中获取敌人大小
+        var config = EnemyConfigClass.get_config_by_type(enemy_type)
+        var enemy_size = config.get("size", Vector2(40, 40))
 
-        match enemy_type:
-            EnemyType.ELITE:
-                shield_width = 50
-                shield_position_y = -40
-            EnemyType.BOSS:
-                shield_width = 80
-                shield_position_y = -55
+        # 设置护盾条大小和位置
+        var shield_width = enemy_size.x
+        var shield_position_y = -enemy_size.y / 2 - 15  # 在血条上方
 
         shield_bar.position = Vector2(-shield_width/2, shield_position_y)
         shield_bar.custom_minimum_size = Vector2(shield_width, 1)
@@ -463,14 +439,12 @@ func update_shield_bar():
         var fill = shield_bar.find_child("Fill")
         if fill:
             var max_shield = max_health * 0.5  # 护盾最大值为最大生命值的50%
-            var shield_percent = float(shield) / max_shield
-            var shield_width = 40
+            var shield_percent = clamp(float(shield) / max_shield, 0.0, 1.0)
 
-            match enemy_type:
-                EnemyType.ELITE:
-                    shield_width = 50
-                EnemyType.BOSS:
-                    shield_width = 80
+            # 从配置中获取敌人大小
+            var config = EnemyConfigClass.get_config_by_type(enemy_type)
+            var enemy_size = config.get("size", Vector2(40, 40))
+            var shield_width = enemy_size.x
 
             fill.size.x = shield_width * shield_percent
 
@@ -556,8 +530,6 @@ func take_damage(amount, damage_type = "physical"):
         # 强制重绘
         health_bar.queue_redraw()
 
-        # 更新生命条
-
     # 发出受伤信号
     damaged.emit(final_damage)
 
@@ -584,14 +556,31 @@ func show_damage_number(amount):
 
 # 死亡
 func die():
+    # 禁用碰撞和物理处理
+    collision_layer = 0
+    collision_mask = 0
+    set_physics_process(false)
+    set_process(false)
+
+    # 将敌人从敌人组中移除，但保留实例
+    remove_from_group("enemies")
+
+    # 标记为死亡状态
+    is_dead = true
+
     # 发出死亡信号
     died.emit(global_position, experience_value)
 
     # 播放死亡动画
     play_death_animation()
 
-    # 使用 call_deferred 延迟销毁敌人，避免在物理查询刷新时销毁
-    call_deferred("queue_free")
+    # 使用Timer延迟销毁敌人，确保所有信号处理完成
+    var death_timer = Timer.new()
+    death_timer.wait_time = 1.0  # 1秒后销毁
+    death_timer.one_shot = true
+    death_timer.autostart = true
+    add_child(death_timer)
+    death_timer.timeout.connect(func(): queue_free())
 
 # 播放死亡动画
 func play_death_animation():
