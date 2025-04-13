@@ -151,7 +151,7 @@ func _update_fill_width():
 	_current_fill_width = _target_fill_width
 
 	# 调试输出
-	print("HealthBar._update_fill_width: current_value = ", current_value, ", max_value = ", max_value, ", percent = ", percent, ", width = ", _current_fill_width)
+	# print("HealthBar._update_fill_width: current_value = ", current_value, ", max_value = ", max_value, ", percent = ", percent, ", width = ", _current_fill_width)
 
 	# 更新填充矩形大小
 	if _fill:

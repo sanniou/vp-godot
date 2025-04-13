@@ -6,16 +6,16 @@ func _init():
     enemy_id = "basic_enemy"
     enemy_name = "基本敌人"
 
-func _ready():
-    # Call parent ready function
-    super._ready()
-
     # Set basic enemy stats
     max_health = 30
     current_health = max_health
     move_speed = 100
     attack_damage = 10
     experience_value = 5
+
+func _ready():
+    # Call parent ready function
+    super._ready()
 
 # 重写视觉效果设置
 func setup_visuals():

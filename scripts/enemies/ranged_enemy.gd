@@ -7,6 +7,13 @@ func _init():
     enemy_name = "远程敌人"
     enemy_type = EnemyType.RANGED
 
+    # Set ranged enemy stats
+    max_health = 50
+    current_health = max_health
+    move_speed = 70
+    attack_damage = 15
+    experience_value = 10
+
 # Ranged enemy specific properties
 var attack_cooldown = 2.0
 var attack_timer = 0
@@ -32,13 +39,6 @@ func setup_visuals():
 func _ready():
 	# Call parent ready function
 	super._ready()
-
-	# Set ranged enemy stats
-	max_health = 50
-	current_health = max_health
-	move_speed = 70
-	attack_damage = 15
-	experience_value = 10
 
 func _physics_process(delta):
 	if target == null or !is_instance_valid(target):

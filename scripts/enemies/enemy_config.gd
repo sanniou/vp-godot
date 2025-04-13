@@ -4,11 +4,11 @@ class_name EnemyConfig
 # 敌人配置数据
 const ENEMY_CONFIGS = {
     "basic": {
-        "max_health": 100,
+        "max_health": 30,
         "move_speed": 100,
         "attack_damage": 10,
         "attack_range": 50,
-        "experience_value": 10,
+        "experience_value": 5,
         "color": Color(0.8, 0.2, 0.2, 1.0),  # 红色
         "size": Vector2(40, 40)
     },
