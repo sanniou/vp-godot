@@ -3,10 +3,11 @@ class_name EnemySpawner
 
 # 预加载类
 const EnemyFactory = preload("res://scripts/enemies/enemy_factory.gd")
+const HealthBarClass = preload("res://scripts/ui/health_bar.gd")
 
 # 敌人类型
 enum EnemyType {
-    MELEE,      # 近战敌人
+    BASIC,      # 基本敌人（近战）
     RANGED,     # 远程敌人
     ELITE,      # 精英敌人
     BOSS        # Boss敌人
@@ -54,13 +55,13 @@ func spawn_enemy():
 		return
 
 	# 根据难度确定敌人类型
-	var enemy_type = EnemyType.MELEE
+	var enemy_type = EnemyType.BASIC
 	var enemy_level = 1 + int(difficulty / 2)  # 每2分钟提升一级
 	var random_value = randf()
 
-	# 开始时只生成近战敌人
+	# 开始时只生成基本敌人
 	if difficulty == 0:
-		enemy_type = EnemyType.MELEE
+		enemy_type = EnemyType.BASIC
 	# 10分钟后，有小概率生成Boss
 	elif difficulty >= 10 and random_value < 0.05:
 		enemy_type = EnemyType.BOSS
@@ -70,9 +71,9 @@ func spawn_enemy():
 	# 2分钟后，有概率生成远程敌人
 	elif difficulty >= 2 and random_value < 0.2 + (difficulty * 0.01):
 		enemy_type = EnemyType.RANGED
-	# 默认生成近战敌人
+	# 默认生成基本敌人
 	else:
-		enemy_type = EnemyType.MELEE
+		enemy_type = EnemyType.BASIC
 
 	# 创建敌人实例
 	var enemy = enemy_factory.create_enemy(enemy_type, enemy_level)
@@ -115,10 +116,10 @@ func spawn_enemy():
 		print("应用敌人速度修改器，原速度:", enemy.move_speed / speed_multiplier, "新速度:", enemy.move_speed)
 
 	# 更新生命条
-	var health_bar = enemy.find_child("ProgressBar")
-	if health_bar and "max_health" in enemy and "current_health" in enemy:
-		health_bar.max_value = enemy.max_health
-		health_bar.value = enemy.current_health
+	var health_bar = enemy.find_child("HealthBar")
+	if health_bar and health_bar is HealthBarClass and "max_health" in enemy and "current_health" in enemy:
+		health_bar.set_max_value(enemy.max_health)
+		health_bar.set_value(enemy.current_health)
 
 	# 安全地连接信号
 	if enemy.has_signal("died"):

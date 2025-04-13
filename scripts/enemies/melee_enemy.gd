@@ -1,7 +1,7 @@
 extends "res://scripts/enemies/abstract_enemy.gd"
 
 func _init():
-    super._init("melee_enemy", "近战敌人", AbstractEnemy.EnemyType.MELEE)
+    super._init("melee_enemy", "近战敌人", AbstractEnemy.EnemyType.BASIC)
 
 # 重写视觉效果设置
 func setup_visuals():

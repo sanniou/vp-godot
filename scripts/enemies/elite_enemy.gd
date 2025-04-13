@@ -1,5 +1,8 @@
 extends "res://scripts/enemies/abstract_enemy.gd"
 
+# 预加载生命条类
+const HealthBarClass = preload("res://scripts/ui/health_bar.gd")
+
 func _init():
     super._init("elite_enemy", "精英敌人", EnemyType.ELITE)
 
@@ -42,9 +45,9 @@ func heal(amount):
     current_health = min(current_health + amount, max_health)
 
     # 更新生命条
-    var health_bar = find_child("ProgressBar")
-    if health_bar:
-        health_bar.value = current_health
+    var health_bar = find_child("HealthBar")
+    if health_bar and health_bar is HealthBarClass:
+        health_bar.set_value(current_health)
 
     # 显示治疗效果
     show_heal_effect(amount)

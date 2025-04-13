@@ -1,8 +1,10 @@
-extends "res://scripts/enemies/enemy.gd"
+extends "res://scripts/enemies/abstract_enemy.gd"
 class_name RangedEnemy
 
+func _init():
+    super._init("ranged_enemy", "远程敌人", AbstractEnemy.EnemyType.RANGED)
+
 # Ranged enemy specific properties
-var attack_range = 300
 var attack_cooldown = 2.0
 var attack_timer = 0
 var projectile_speed = 150
@@ -32,7 +34,7 @@ func _ready():
 	max_health = 50
 	current_health = max_health
 	move_speed = 70
-	damage = 15
+	attack_damage = 15
 	experience_value = 10
 
 func _physics_process(delta):

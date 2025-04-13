@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://c8kqfxw5gvwqj"]
+[gd_scene load_steps=7 format=3 uid="uid://c8kqfxw5gvwqj"]
 
 [ext_resource type="Script" path="res://scripts/enemies/ranged_enemy.gd" id="1_yvj4r"]
 
@@ -24,6 +24,20 @@ tracks/0/keys = {
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_8j5vx"]
 radius = 25.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
+bg_color = Color(0.2, 0.2, 0.2, 0.7)
+corner_radius_top_left = 0
+corner_radius_top_right = 0
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2"]
+bg_color = Color(0.8, 0.2, 0.8, 1.0)
+corner_radius_top_left = 0
+corner_radius_top_right = 0
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
 
 [node name="RangedEnemy" type="CharacterBody2D" groups=["enemies"]]
 collision_layer = 4
@@ -95,17 +109,3 @@ color = Color(0.8, 0.2, 0.8, 1.0)
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 autoplay = "idle"
 anims/idle = SubResource("Animation_enemy")
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
-bg_color = Color(0.2, 0.2, 0.2, 0.7)
-corner_radius_top_left = 0
-corner_radius_top_right = 0
-corner_radius_bottom_right = 0
-corner_radius_bottom_left = 0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2"]
-bg_color = Color(0.8, 0.2, 0.8, 1.0)
-corner_radius_top_left = 0
-corner_radius_top_right = 0
-corner_radius_bottom_right = 0
-corner_radius_bottom_left = 0

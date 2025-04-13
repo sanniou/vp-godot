@@ -1,13 +1,16 @@
 extends CharacterBody2D
 class_name AbstractEnemy
 
+# 预加载生命条类
+const HealthBarClass = preload("res://scripts/ui/health_bar.gd")
+
 # 信号
 signal died(position, experience)
 signal damaged(amount)
 
 # 敌人类型枚举
 enum EnemyType {
-    MELEE,      # 近战敌人
+    BASIC,      # 基本敌人（近战）
     RANGED,     # 远程敌人
     ELITE,      # 精英敌人
     BOSS        # Boss敌人
@@ -16,7 +19,7 @@ enum EnemyType {
 # 基本属性
 var enemy_id: String = ""
 var enemy_name: String = "抽象敌人"
-var enemy_type: int = EnemyType.MELEE
+var enemy_type: int = EnemyType.BASIC
 var level: int = 1
 var experience_value: int = 10
 
@@ -69,45 +72,51 @@ var last_collision_time: int = 0  # 上次碰撞时间
 # 攻击系统
 var attack_system = null
 
+# 预加载敌人配置
+const EnemyConfigClass = preload("res://scripts/enemies/enemy_config.gd")
+
+# 预加载敌人状态机
+const EnemyStateMachineClass = preload("res://scripts/enemies/enemy_state_machine.gd")
+
+# 敌人状态机
+var state_machine = null
+
+# 探测范围
+var detection_range = 500.0
+
+# 眼晕持续时间
+var stun_duration = 1.0
+
 # 构造函数
-func _init(id: String, name: String, type: int = EnemyType.MELEE):
+func _init(id: String, name: String, type: int = EnemyType.BASIC):
     enemy_id = id
     enemy_name = name
     enemy_type = type
 
-    # 根据敌人类型设置基本属性
+    # 从配置文件加载敌人属性
+    var config = {}
+
     match type:
-        EnemyType.MELEE:
-            max_health = 100.0
-            move_speed = 100.0
-            attack_damage = 10.0
-            attack_range = 50.0
-            experience_value = 10
+        EnemyType.BASIC:
+            config = EnemyConfigClass.get_config("basic")
         EnemyType.RANGED:
-            max_health = 80.0
-            move_speed = 80.0
-            attack_damage = 15.0
-            attack_range = 200.0
-            experience_value = 15
+            config = EnemyConfigClass.get_config("ranged")
         EnemyType.ELITE:
-            max_health = 200.0
-            move_speed = 90.0
-            attack_damage = 20.0
-            attack_range = 70.0
-            physical_resistance = 0.2
-            magic_resistance = 0.2
-            experience_value = 30
+            config = EnemyConfigClass.get_config("elite")
         EnemyType.BOSS:
-            max_health = 1000.0
-            move_speed = 70.0
-            attack_damage = 30.0
-            attack_range = 100.0
-            physical_resistance = 0.3
-            magic_resistance = 0.3
-            shield = 200.0
-            shield_regeneration = 5.0
-            knockback_resistance = 0.5
-            experience_value = 100
+            config = EnemyConfigClass.get_config("boss")
+
+    # 设置属性
+    max_health = config.get("max_health", 100.0)
+    move_speed = config.get("move_speed", 100.0)
+    attack_damage = config.get("attack_damage", 10.0)
+    attack_range = config.get("attack_range", 50.0)
+    experience_value = config.get("experience_value", 10)
+    physical_resistance = config.get("physical_resistance", 0.0)
+    magic_resistance = config.get("magic_resistance", 0.0)
+    shield = config.get("shield", 0.0)
+    shield_regeneration = config.get("shield_regeneration", 0.0)
+    knockback_resistance = config.get("knockback_resistance", 0.0)
 
     current_health = max_health
 
@@ -127,6 +136,9 @@ func _ready():
 
     # 初始化技能
     setup_skills()
+
+    # 初始化状态机
+    state_machine = EnemyStateMachineClass.new(self)
 
     # 调试输出
     # print("Enemy created: ", enemy_name, ", health: ", current_health, "/", max_health)
@@ -153,11 +165,25 @@ func setup_collision():
 
 # 设置视觉效果
 func setup_visuals():
-    # 子类可以重写此方法设置特定的视觉效果
+    # 从配置加载视觉效果参数
+    var config = {}
+
+    match enemy_type:
+        EnemyType.BASIC:
+            config = EnemyConfigClass.get_config("basic")
+        EnemyType.RANGED:
+            config = EnemyConfigClass.get_config("ranged")
+        EnemyType.ELITE:
+            config = EnemyConfigClass.get_config("elite")
+        EnemyType.BOSS:
+            config = EnemyConfigClass.get_config("boss")
+
+    # 创建敌人外观
     var visual = ColorRect.new()
-    visual.color = Color(1, 0, 0, 1)  # 红色
-    visual.size = Vector2(40, 40)
-    visual.position = Vector2(-20, -20)
+    visual.color = config.get("color", Color(1, 0, 0, 1))  # 默认红色
+    var size = config.get("size", Vector2(40, 40))
+    visual.size = size
+    visual.position = Vector2(-size.x/2, -size.y/2)
     add_child(visual)
 
     # 设置血条
@@ -165,9 +191,6 @@ func setup_visuals():
 
     # 设置护盾条（如果有护盾）
     setup_shield_bar()
-
-    # 调试输出
-    # print("Health bar created: max_value = ", health_bar.max_value, ", value = ", health_bar.value)
 
 # 设置攻击系统
 func setup_attack_system():
@@ -194,6 +217,27 @@ func _process(delta):
 
     # 更新技能
     update_skills(delta)
+
+    # 更新状态机
+    if state_machine:
+        # 检查与玩家的距离
+        var player_distance = 9999.0
+        var can_attack_player = false
+
+        if target:
+            player_distance = global_position.distance_to(target.global_position)
+            can_attack_player = player_distance <= attack_range
+
+        # 更新状态机条件
+        state_machine.update_conditions(
+            player_distance,
+            can_attack_player,
+            is_stunned,
+            current_health <= 0
+        )
+
+        # 处理状态
+        state_machine.process_state(delta)
 
 # 物理更新
 func _physics_process(delta):
@@ -223,6 +267,12 @@ func _physics_process(delta):
         # 打印当前速度
         print("Knocked back enemy velocity: ", velocity)
         # 仅执行移动，不改变速度
+        move_and_slide()
+        return
+
+    # 如果正在使用状态机，则由状态机控制移动
+    if state_machine:
+        # 执行移动
         move_and_slide()
         return
 
@@ -299,41 +349,62 @@ func setup_health_bar():
     # 检查是否已经存在血条
     var existing_health_bar = find_child("HealthBar")
     if existing_health_bar:
-        # 调整现有血条的大小和位置
-        existing_health_bar.position = Vector2(-health_bar_width/2, health_bar_position_y)
-        existing_health_bar.custom_minimum_size = Vector2(health_bar_width, health_bar_height)
-
-        # 调整血条背景和前景大小
-        var bg = existing_health_bar.find_child("Background")
-        if bg:
-            bg.size = Vector2(health_bar_width, health_bar_height)
-
-        var fill = existing_health_bar.find_child("Fill")
-        if fill:
-            fill.size.x = health_bar_width * (float(current_health) / max_health)
-            fill.size.y = health_bar_height
-
-        return
+        # 如果是新的HealthBar类，直接调用其方法
+        if existing_health_bar is HealthBarClass:
+            existing_health_bar.position = Vector2(-health_bar_width/2, health_bar_position_y)
+            existing_health_bar.set_bar_size(health_bar_width, health_bar_height)
+            existing_health_bar.set_max_value(max_health)
+            existing_health_bar.set_value(current_health)
+            return
+        else:
+            # 如果是旧的生命条，删除它
+            existing_health_bar.queue_free()
 
     # 创建新的血条
-    var health_bar = Control.new()
-    health_bar.name = "HealthBar"  # 给生命条命名，便于查找
-    health_bar.position = Vector2(-health_bar_width/2, health_bar_position_y)  # 调整位置，浮在敌人头顶
-    health_bar.custom_minimum_size = Vector2(health_bar_width, health_bar_height)  # 设置容器大小
+    var health_bar = HealthBarClass.new()
+    health_bar.name = "HealthBar"
+    health_bar.position = Vector2(-health_bar_width/2, health_bar_position_y)
+    health_bar.set_bar_size(health_bar_width, health_bar_height)
+    health_bar.set_max_value(max_health)
+    health_bar.set_value(current_health)
 
-    # 创建血条背景
-    var bg = ColorRect.new()
-    bg.name = "Background"
-    bg.size = Vector2(health_bar_width, health_bar_height)  # 设置背景大小
-    bg.color = Color(0.2, 0.2, 0.2, 0.7)  # 灰色背景
-    health_bar.add_child(bg)
+    # 调试输出
+    print("Created health bar for ", enemy_name, ": max_health = ", max_health, ", current_health = ", current_health)
+    print("Health bar settings: max_value = ", health_bar.max_value, ", current_value = ", health_bar.current_value)
 
-    # 创建血条前景
-    var fill = ColorRect.new()
-    fill.name = "Fill"
-    fill.size = Vector2(health_bar_width * (float(current_health) / max_health), health_bar_height)  # 初始大小，根据生命值调整
-    fill.color = Color(0.8, 0, 0, 1)  # 红色生命条
-    health_bar.add_child(fill)
+    # 设置颜色和闪烁效果
+    var fill_color = Color(0.8, 0, 0, 1)  # 默认红色
+    var low_health_color = Color(1.0, 0.0, 0.0, 1.0)  # 默认低生命值颜色
+    var flash_speed = 3.0  # 默认闪烁速度
+    var damage_flash_duration = 0.3  # 默认受伤闪烁持续时间
+
+    # 根据敌人类型调整颜色和闪烁效果
+    match enemy_type:
+        EnemyType.ELITE:
+            fill_color = Color(0.8, 0.8, 0.2, 1.0)  # 黄色
+            low_health_color = Color(1.0, 0.8, 0.0, 1.0)  # 橙色
+            flash_speed = 4.0  # 精英敌人闪烁更快
+            damage_flash_duration = 0.4  # 精英敌人受伤闪烁更长
+        EnemyType.BOSS:
+            fill_color = Color(0.8, 0.0, 0.0, 1.0)  # 深红色
+            low_health_color = Color(1.0, 0.0, 0.0, 1.0)  # 亮红色
+            flash_speed = 5.0  # Boss敌人闪烁更快
+            damage_flash_duration = 0.5  # Boss敌人受伤闪烁更长
+
+    # 设置颜色
+    health_bar.set_colors(Color(0.2, 0.2, 0.2, 0.7), fill_color, low_health_color)
+
+    # 设置闪烁效果
+    health_bar.set_flash_speed(flash_speed)
+    health_bar.set_damage_flash_duration(damage_flash_duration)
+
+    # 设置低生命值阈值，精英和Boss敌人的阈值更低
+    if enemy_type == EnemyType.ELITE:
+        health_bar.set_low_health_threshold(0.25)  # 25%
+    elif enemy_type == EnemyType.BOSS:
+        health_bar.set_low_health_threshold(0.2)  # 20%
+    else:
+        health_bar.set_low_health_threshold(0.3)  # 30%
 
     # 添加到敌人
     add_child(health_bar)
@@ -473,12 +544,24 @@ func take_damage(amount, damage_type = "physical"):
     # 应用伤害
     current_health -= final_damage
 
-    # 更新生命条
-    setup_health_bar()
+    # 确保生命值不会小于0
+    current_health = max(0, current_health)
 
-    # 调试输出
-    # print("Enemy health: ", current_health, "/", max_health, " = ", (current_health / max_health) * 100, "%")
-    # print("Health bar: max_value = ", health_bar.max_value, ", value = ", health_bar.value, ", ratio = ", health_bar.value / health_bar.max_value)
+    # 更新生命条
+    var health_bar = find_child("HealthBar")
+    if health_bar and health_bar is HealthBarClass:
+        # 设置最大值，确保与当前生命值一致
+        health_bar.set_max_value(max_health)
+        # 显示受伤闪烁
+        health_bar.set_value(current_health, true)
+        # 强制更新血条
+        health_bar._update_fill_width()
+        # 强制重绘
+        health_bar.queue_redraw()
+
+        # 调试输出
+        print("Enemy ", enemy_name, " health: ", current_health, "/", max_health, " = ", (current_health / max_health) * 100, "%")
+        print("Health bar: max_value = ", health_bar.max_value, ", value = ", health_bar.current_value, ", ratio = ", health_bar.current_value / health_bar.max_value)
 
     # 发出受伤信号
     damaged.emit(final_damage)

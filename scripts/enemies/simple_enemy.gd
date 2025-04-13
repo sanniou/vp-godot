@@ -1,17 +1,17 @@
 extends "res://scripts/enemies/abstract_enemy.gd"
-class_name BasicEnemy
+class_name SimpleEnemy
 
 # 预加载抽象敌人类
 const AbstractEnemy = preload("res://scripts/enemies/abstract_enemy.gd")
 
 func _init():
-    super._init("basic_enemy", "基本敌人", AbstractEnemy.EnemyType.BASIC)
+    super._init("simple_enemy", "简单敌人", AbstractEnemy.EnemyType.BASIC)
 
 func _ready():
-    # Call parent ready function
+    # 调用父类的 _ready 方法
     super._ready()
 
-    # Set basic enemy stats
+    # 设置基本敌人属性
     max_health = 30
     current_health = max_health
     move_speed = 100

@@ -1,6 +1,9 @@
 extends CharacterBody2D
 class_name Enemy
 
+# 预加载生命条类
+const HealthBarClass = preload("res://scripts/ui/health_bar.gd")
+
 signal died(position, experience)
 
 # Enemy stats
@@ -44,8 +47,10 @@ func take_damage(amount):
 	current_health -= amount
 
 	# Update health bar
-	if health_bar:
-		health_bar.value = (float(current_health) / max_health) * 100
+	var health_bar = find_child("HealthBar")
+	if health_bar and health_bar is HealthBarClass:
+		# 显示受伤闪烁
+		health_bar.set_value(current_health, true)
 
 	# Flash to indicate damage
 	modulate = Color(1, 0.3, 0.3, 0.7)
