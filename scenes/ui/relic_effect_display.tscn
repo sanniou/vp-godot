@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8j6y8o4n6xqv"]
+
+[ext_resource type="Script" path="res://scripts/ui/relic_effect_display.gd" id="1_2jk3p"]
+
+[node name="RelicEffectDisplay" type="Node2D"]
+script = ExtResource("1_2jk3p")

@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 # 最大可选遗物数量
-var max_relics = 1
+var max_relics = 3
 
 # 已选择的遗物
 var selected_relics = []
@@ -63,24 +63,11 @@ func generate_relic_grid():
 	for child in grid.get_children():
 		child.queue_free()
 
-	# 获取所有可用遗物的信息
-	# 暂时使用硬编码的遗物信息代替
-	var all_relics_info = [
-		{"id": "phoenix_feather", "name": "凤凰之羽", "description": "死亡时自动复活一次，恢复50%生命值", "icon": "🔥", "rarity": "rare"},
-		{"id": "wisdom_crystal", "name": "智慧水晶", "description": "游戏开始时自动获得一级", "icon": "💎", "rarity": "uncommon"},
-		{"id": "magnetic_amulet", "name": "磁力护符", "description": "经验球吸取范围增加50%，经验值增加20%", "icon": "🧲", "rarity": "common"},
-		{"id": "heart_amulet", "name": "生命护符", "description": "最大生命值增加25", "icon": "❤️", "rarity": "common"},
-		{"id": "lucky_clover", "name": "幸运四叶草", "description": "升级时获得4个选项而不是3个", "icon": "🍀", "rarity": "uncommon"},
-		{"id": "shadow_cloak", "name": "暗影披风", "description": "10%几率闪避敌人攻击", "icon": "👻", "rarity": "uncommon"},
-		{"id": "upgrade_enhancer", "name": "升级增强器", "description": "增加升级选项数量(+1)，增加重新随机次数(+1)，提高选项数值(+20%)", "icon": "🔮", "rarity": "rare"},
+	# 加载遗物工具类
+	var RelicUtils = load("res://scripts/utils/relic_utils.gd")
 
-		# 新遗物
-		{"id": "time_warper", "name": "时间扭曲器", "description": "减缓敌人移动速度(25%)，增加玩家攻击速度(15%)", "icon": "⏱️", "rarity": "rare"},
-		{"id": "elemental_resonance", "name": "元素共鸣", "description": "每种不同类型的武器增加8%伤害(最大40%)", "icon": "🔄", "rarity": "epic"},
-		{"id": "experience_catalyst", "name": "经验催化剂", "description": "击杀敌人有25%几率掉落额外经验球", "icon": "✨", "rarity": "uncommon"},
-		{"id": "critical_amulet", "name": "暴击护符", "description": "增加15%暴击几率，暴击造成双倍伤害", "icon": "🔮", "rarity": "rare"},
-		{"id": "life_steal", "name": "生命窃取", "description": "造成伤害时恢复伤害值5%的生命值", "icon": "💉", "rarity": "uncommon"}
-	]
+	# 获取所有可用遗物的信息
+	var all_relics_info = relic_manager.get_available_relics_info()
 
 	# 为每个遗物创建一个按钮
 	for relic_info in all_relics_info:
@@ -113,6 +100,9 @@ func update_selected_relics_display():
 		$Control/StartButton.disabled = true
 		return
 
+	# 加载遗物工具类
+	var RelicUtils = load("res://scripts/utils/relic_utils.gd")
+
 	var text = ""
 	var equipped_relics_info = []
 
@@ -121,36 +111,9 @@ func update_selected_relics_display():
 		# 使用多语言系统获取遗物信息
 		var relic_info = {
 			"id": relic_id,
-			"name": language_manager.get_translation("relic_" + relic_id + "_name", format_relic_name(relic_id)),
-			"icon": "🔮"
+			"name": language_manager.get_translation("relic_" + relic_id + "_name", RelicUtils.format_relic_name(relic_id)),
+			"icon": RelicUtils.get_relic_icon(relic_id)
 		}
-
-		# 根据ID设置图标
-		match relic_id:
-			"phoenix_feather":
-				relic_info.icon = "🔥"
-			"wisdom_crystal":
-				relic_info.icon = "💎"
-			"magnetic_amulet":
-				relic_info.icon = "🧲"
-			"heart_amulet":
-				relic_info.icon = "❤️"
-			"lucky_clover":
-				relic_info.icon = "🍀"
-			"shadow_cloak":
-				relic_info.icon = "👻"
-			"upgrade_enhancer":
-				relic_info.icon = "🔮"
-			"time_warper":
-				relic_info.icon = "⏱️"
-			"elemental_resonance":
-				relic_info.icon = "🔄"
-			"experience_catalyst":
-				relic_info.icon = "✨"
-			"critical_amulet":
-				relic_info.icon = "🔮"
-			"life_steal":
-				relic_info.icon = "💉"
 
 		equipped_relics_info.append(relic_info)
 
@@ -171,17 +134,19 @@ func update_selected_relics_display():
 func _on_relic_button_pressed(button):
 	var relic_id = button.get_meta("relic_id")
 
-	# 清除所有按钮的选中状态
-	for child in $Control/RelicGrid.get_children():
-		if child != button and child is Button:
-			child.button_pressed = false
-
 	if button.button_pressed:
+		# 检查是否已达到最大遗物数量
+		if selected_relics.size() >= max_relics:
+			# 如果已达到最大数量，取消选中并返回
+			button.button_pressed = false
+			return
+
 		# 添加到已选择列表
-		selected_relics = [relic_id]
+		if not selected_relics.has(relic_id):
+			selected_relics.append(relic_id)
 	else:
 		# 从已选择列表中移除
-		selected_relics.clear()
+		selected_relics.erase(relic_id)
 
 	# 更新显示
 	update_selected_relics_display()
@@ -257,14 +222,9 @@ func update_ui_text():
 
 # 格式化遗物名称（将下划线替换为空格并将首字母大写）
 func format_relic_name(relic_id: String) -> String:
-	# 将下划线替换为空格
-	var formatted_name = relic_id.replace("_", " ")
-
-	# 将首字母大写
-	if formatted_name.length() > 0:
-		formatted_name = formatted_name.substr(0, 1).to_upper() + formatted_name.substr(1)
-
-	return formatted_name
+	# 使用遗物工具类的格式化函数
+	var RelicUtils = load("res://scripts/utils/relic_utils.gd")
+	return RelicUtils.format_relic_name(relic_id)
 
 # 处理语言变更
 func _on_language_changed(new_language):
